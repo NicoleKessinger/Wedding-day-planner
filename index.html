@@ -109,6 +109,15 @@
   .col-header:active { cursor: grabbing; }
   .map-wrap { overflow: auto; border: 1px solid var(--border); border-radius: 12px; background: var(--surface); max-height: 74vh; box-shadow: var(--shadow); }
   .mapsvg { display: block; }
+  .mapsvg-head { position: sticky; top: 0; z-index: 3; background: var(--surface); box-shadow: 0 1px 0 var(--border), 0 6px 10px -8px rgba(70,55,35,0.25); }
+  .mc-expand { margin-left: auto; }
+  .mfs-bar { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 8px; }
+  .mfs-names { font-family: var(--font-display); font-size: 38px; line-height: 1.1; color: var(--ink); }
+  .map-shell.expanded { position: fixed; inset: 0; z-index: 60; background: var(--bg); padding: 12px 20px 14px; display: flex; flex-direction: column; overflow: hidden; }
+  .map-shell.expanded .map-wrap { flex: 1 1 auto; min-height: 0; max-height: none; }
+  .map-shell.expanded .map-hint, .map-shell.expanded .map-note { display: none; }
+  .map-shell.expanded .legend { margin-top: 10px; flex: none; }
+  .map-shell.expanded .map-controls, .map-shell.expanded .party-legend { flex: none; }
   .mapsvg text { font-family: var(--font-ui); }
   .mapsvg text.tlabel { font-variant-numeric: lining-nums tabular-nums; }
   .map-hint { font-size: 16px; color: var(--muted); margin: 0 0 12px; line-height: 1.4; }
@@ -642,7 +651,7 @@ function buildCsv(events, subEvents, parties, places, resolved) {
   return lines.join("\n");
 }
 /* ================= Map ================= */
-function MapView({ events, subEvents, parties, places, resolved, selId, setSelId, collapse, showLabels, onMovePlaceTo, onAddEvent, onAddSubEvent, filter, editable }) {
+function MapView({ events, subEvents, parties, places, resolved, selId, setSelId, collapse, showLabels, onMovePlaceTo, onAddEvent, onAddSubEvent, filter, editable: editableProp }) {
   const matches = s => filter === "all" || !filter || s.status !== "confirmed";
   const svgRef = useRef(null); const wrapRef = useRef(null);
   const [dragId, setDragId] = useState(null);
@@ -652,6 +661,25 @@ function MapView({ events, subEvents, parties, places, resolved, selId, setSelId
   const [zoom, setZoom] = useState(1);
   const [density, setDensity] = useState("full");
   const highlight = hoverParty || focusParty;
+  const [expanded, setExpanded] = useState(false);
+  const shellRef = useRef(null);
+  const editable = editableProp && !expanded;   /* the expanded map is for viewing only */
+  function expandMap() {
+    setExpanded(true);
+    try { const el = shellRef.current; const p = el && el.requestFullscreen ? el.requestFullscreen() : null; if (p && p.catch) p.catch(() => {}); } catch (_) {}
+  }
+  function collapseMap() {
+    setExpanded(false); setSelId(null);
+    try { if (document.fullscreenElement && document.exitFullscreen) { const p = document.exitFullscreen(); if (p && p.catch) p.catch(() => {}); } } catch (_) {}
+  }
+  useEffect(() => {
+    if (!expanded) return;
+    const onKey = e => { if (e.key === "Escape") collapseMap(); };
+    const onFs = () => { if (!document.fullscreenElement) collapseMap(); };
+    const prevOverflow = document.body.style.overflow; document.body.style.overflow = "hidden";
+    window.addEventListener("keydown", onKey); document.addEventListener("fullscreenchange", onFs);
+    return () => { window.removeEventListener("keydown", onKey); document.removeEventListener("fullscreenchange", onFs); document.body.style.overflow = prevOverflow; };
+  }, [expanded]);
 
   const sortedParties = [...parties].sort((a, b) => a.laneOrder - b.laneOrder);
   const rankOf = {}; sortedParties.forEach((p, i) => { rankOf[p.id] = i; });
@@ -664,6 +692,7 @@ function MapView({ events, subEvents, parties, places, resolved, selId, setSelId
 
   const PAD_LEFT = 66, COL0 = PAD_LEFT + 76, COL_GAP = 148, PAD_TOP = 62, PAD_BOTTOM = 40, PXM_BASE = 1.05, TRACK_GAP = 16;
   const PXM = PXM_BASE * zoom;
+  const HEAD_H = PAD_TOP - 8;   /* height of the pinned place headers */
   const colX = idx => COL0 + idx * COL_GAP;
   const BUNDLE_SHIFT = Math.max(0, Math.min(28, COL_GAP * 0.46 - ((nP - 1) / 2) * TRACK_GAP - 8));
   const trackOff = pid => (rankOf[pid] - (nP - 1) / 2) * TRACK_GAP - BUNDLE_SHIFT;
@@ -751,8 +780,8 @@ function MapView({ events, subEvents, parties, places, resolved, selId, setSelId
     if (hit) onAddSubEvent(hit.id, mins); else onAddEvent({ location: placeId, start: mins });
   }
   function yToMins(clientY) {
-    const rect = svgRef.current.getBoundingClientRect(); const scaleY = rect.height ? (height / rect.height) : 1;
-    const y = (clientY - rect.top) * scaleY; const mins = Math.round((((y - PAD_TOP) / PXM) + tMin) / 5) * 5;
+    const rect = svgRef.current.getBoundingClientRect(); const scaleY = rect.height ? ((height - HEAD_H) / rect.height) : 1;
+    const y = (clientY - rect.top) * scaleY + HEAD_H; const mins = Math.round((((y - PAD_TOP) / PXM) + tMin) / 5) * 5;
     return Math.max(0, Math.min(1435, mins));
   }
   function bandMove(e, col) { if (!editable || dragId) return; setHoverAdd({ col, mins: yToMins(e.clientY) }); }
@@ -770,7 +799,13 @@ function MapView({ events, subEvents, parties, places, resolved, selId, setSelId
   }
 
   return (
-    <div>
+    <div className={"map-shell" + (expanded ? " expanded" : "")} ref={shellRef}>
+      {expanded ? (
+        <div className="mfs-bar">
+          <span className="mfs-names">Nicole and Michael</span>
+          <button className="btn" onClick={collapseMap} title="Close full screen (Esc)">Exit full screen</button>
+        </div>
+      ) : null}
       <div className="map-controls">
         <div className="mc-group">
           <button className="btn subtle sm" onClick={() => zoomBy(1 / 1.25)} title="Zoom out">{"−"}</button>
@@ -788,6 +823,11 @@ function MapView({ events, subEvents, parties, places, resolved, selId, setSelId
             {sortedParties.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
           </select>
         </label>
+        {!expanded ? (
+          <button className="btn sm mc-expand" onClick={expandMap} title="Show only the map, full screen">
+            <svg width="15" height="15" viewBox="0 0 16 16" aria-hidden="true" style={{ marginRight: 7, verticalAlign: "-2px" }}><path d="M2 6V2h4M14 6V2h-4M2 10v4h4M14 10v4h-4" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" /></svg>Full screen
+          </button>
+        ) : null}
       </div>
       <div className="party-legend">
         {sortedParties.map(p => (
@@ -804,7 +844,22 @@ function MapView({ events, subEvents, parties, places, resolved, selId, setSelId
         ? "Tip: click a line where something happens to put a sub event on it, or click empty space in a column to add an event. Click a party in the key to focus its line. Drag a column header to reorder places."
         : "Tip: click a party in the key to focus its line, or use Focus to follow one group through the day."}</p>
       <div className="map-wrap" ref={wrapRef}>
-        <svg ref={svgRef} className="mapsvg" width={width} height={height} viewBox={"0 0 " + width + " " + height} role="img" aria-label="Wedding day timeline as a vertical transit map. Time runs top to bottom, each column is a place, and each colored line is a party moving between places.">
+        <svg className="mapsvg mapsvg-head" width={width} height={HEAD_H} viewBox={"0 0 " + width + " " + HEAD_H} aria-hidden="true">
+      {places.map((pl, i) => (
+        <g key={"hdr" + pl.id} style={{ cursor: editable ? "grab" : "default" }} className="col-header"
+          onPointerDown={e => headerDown(e, pl.id)} onPointerMove={headerMove} onPointerUp={headerUp}>
+          <rect x={colX(i) - COL_GAP * 0.46} y={4} width={COL_GAP * 0.92} height={HEAD_H - 8} rx={6}
+            style={{ fill: dragId === pl.id ? "var(--accent-soft)" : "var(--surface)", stroke: dragId === pl.id ? "var(--accent)" : "var(--border)" }} strokeWidth="1" />
+          <text x={colX(i)} y={28} textAnchor="middle" fontSize="15" fontWeight="700" style={{ fill: "var(--ink)", pointerEvents: "none" }}>{trunc(pl.name, 19)}<title>{pl.name}</title></text>
+          {editable ? (
+            <g style={{ pointerEvents: "none" }}>
+              {[0, 1, 2].map(gx => [0, 1].map(gy => (<circle key={gx + "-" + gy} cx={colX(i) - 5 + gx * 5} cy={40 + gy * 5} r={1.3} style={{ fill: "var(--faint)" }} />)))}
+            </g>
+          ) : null}
+        </g>
+      ))}
+        </svg>
+        <svg ref={svgRef} className="mapsvg" width={width} height={height - HEAD_H} viewBox={"0 " + HEAD_H + " " + width + " " + (height - HEAD_H)} role="img" aria-label="Wedding day timeline as a vertical transit map. Time runs top to bottom, each column is a place, and each colored line is a party moving between places.">
           {places.map((pl, i) => (
             <rect key={"band" + pl.id} className="col-band" x={colX(i) - COL_GAP * 0.46} y={PAD_TOP - 8} width={COL_GAP * 0.92} height={height - PAD_TOP - PAD_BOTTOM + 8} rx={8}
               style={{ fill: "var(--surface-2)", cursor: editable ? "crosshair" : "default" }} opacity={dragId === pl.id ? 0.9 : 0.45}
@@ -938,19 +993,6 @@ function MapView({ events, subEvents, parties, places, resolved, selId, setSelId
             );
           }) : null}
 
-          {places.map((pl, i) => (
-            <g key={"hdr" + pl.id} style={{ cursor: editable ? "grab" : "default" }} className="col-header"
-              onPointerDown={e => headerDown(e, pl.id)} onPointerMove={headerMove} onPointerUp={headerUp}>
-              <rect x={colX(i) - COL_GAP * 0.46} y={4} width={COL_GAP * 0.92} height={PAD_TOP - 12} rx={6}
-                style={{ fill: dragId === pl.id ? "var(--accent-soft)" : "var(--surface)", stroke: dragId === pl.id ? "var(--accent)" : "var(--border)" }} strokeWidth="1" />
-              <text x={colX(i)} y={30} textAnchor="middle" fontSize="15" fontWeight="700" style={{ fill: "var(--ink)", pointerEvents: "none" }}>{trunc(pl.name, 19)}<title>{pl.name}</title></text>
-              {editable ? (
-                <g style={{ pointerEvents: "none" }}>
-                  {[0, 1, 2].map(gx => [0, 1].map(gy => (<circle key={gx + "-" + gy} cx={colX(i) - 5 + gx * 5} cy={42 + gy * 5} r={1.3} style={{ fill: "var(--faint)" }} />)))}
-                </g>
-              ) : null}
-            </g>
-          ))}
         </svg>
       </div>
 
