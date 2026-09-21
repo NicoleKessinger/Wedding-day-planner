@@ -879,7 +879,7 @@ function MapView({ events, subEvents, parties, places, resolved, selId, setSelId
   }
   useEffect(() => {
     if (!expanded) return;
-    const onKey = e => { if (e.key === "Escape") collapseMap(); };
+    const onKey = e => { if (e.key === "Escape" && !document.querySelector(".dpanel")) collapseMap(); };
     const onFs = () => { if (!document.fullscreenElement) collapseMap(); };
     const prevOverflow = document.body.style.overflow; document.body.style.overflow = "hidden";
     window.addEventListener("keydown", onKey); document.addEventListener("fullscreenchange", onFs);
@@ -1483,7 +1483,9 @@ function PanelShell({ badge, title, sub, onClose, footer, label, children }) {
     window.addEventListener("keydown", onKey);
     return () => { window.removeEventListener("keydown", onKey); document.body.style.overflow = prevOverflow; if (prev && prev.focus) prev.focus({ preventScroll: true }); };
   }, []);
-  return (
+  /* Only the fullscreen element is visible in fullscreen, so render inside the expanded map when it is open. */
+  const host = document.querySelector(".map-shell.expanded") || document.body;
+  const node = (
     <React.Fragment>
       <div className="dscrim" onClick={onClose}></div>
       <aside className="dpanel" role="dialog" aria-modal="true" aria-label={label}>
@@ -1497,6 +1499,7 @@ function PanelShell({ badge, title, sub, onClose, footer, label, children }) {
       </aside>
     </React.Fragment>
   );
+  return host === document.body ? node : ReactDOM.createPortal(node, host);
 }
 
 function DetailPanel({ kind, row, events, subEvents, parties, places, resolved, warnings, editable, onUpdate, onDuplicate, onDelete, onClose, onAddSubEvent, onSelect, onUpdatePlace, onUpdateParty }) {
@@ -2371,12 +2374,12 @@ function App() {
         <b>How times work:</b> an event holds a clock time when it has a start time. Otherwise it starts when the event it follows ends, plus any gap. A moment either holds a clock time or follows its event, keeping its distance from the event's start, so it moves along with it. The end time is always the start plus how long it runs. Times are shown in 12 hour time.
       </div>
 
-      {!mapFs ? <DetailPanel kind={selKind} row={selEvent || selSubEvent} events={events} subEvents={subEvents} parties={parties} places={places} resolved={resolved}
-        warnings={selId ? warningsById[selId] : null} editable={editable}
+      <DetailPanel kind={selKind} row={selEvent || selSubEvent} events={events} subEvents={subEvents} parties={parties} places={places} resolved={resolved}
+        warnings={selId ? warningsById[selId] : null} editable={editable && !mapFs}
         onUpdate={patch => (selKind === "event" ? updateEvent(selId, patch) : updateSubEvent(selId, patch))}
         onDuplicate={() => (selKind === "event" ? duplicateEvent(selId) : duplicateSubEvent(selId))}
         onDelete={() => (selKind === "event" ? requestDeleteEvent(selId) : deleteSubEvent(selId))}
-        onClose={() => setSelId(null)} onAddSubEvent={addSubEvent} onSelect={id => setSelId(id)} onUpdatePlace={updatePlace} onUpdateParty={updateParty} /> : null}
+        onClose={() => setSelId(null)} onAddSubEvent={addSubEvent} onSelect={id => setSelId(id)} onUpdatePlace={updatePlace} onUpdateParty={updateParty} />
 
       {confirm ? (
         <div className="modal-scrim" onClick={() => setConfirm(null)}>
