@@ -854,11 +854,19 @@ function buildCsv(events, subEvents, parties, places, resolved) {
   });
   return lines.join("\n");
 }
+/* the change that puts an event at a new start. An event with a fixed start gets a new start, an event that follows another keeps following it and only changes its gap. Moments that follow the event ride along on their own when times are resolved, fixed-time moments never move. */
+function moveEventPatch(ev, resolved, newStart) {
+  if (ev.start !== null && ev.start !== undefined) return { start: newStart };
+  if (ev.follows) { const f = resolved[ev.follows]; if (f && f.end != null) return { gap: Math.max(0, newStart - f.end) }; }
+  return null;
+}
 /* ================= Map ================= */
-function MapView({ events, subEvents, parties, places, resolved, selId, setSelId, collapse, showLabels, onMovePlaceTo, onAddEvent, onAddSubEvent, filter, editable: editableProp, onExpandedChange }) {
+function MapView({ events, subEvents, parties, places, resolved: resolvedProp, selId, setSelId, collapse, showLabels, onMovePlaceTo, onMoveEvent, onAddEvent, onAddSubEvent, filter, editable: editableProp, onExpandedChange }) {
   const matches = s => filter === "all" || !filter || s.status !== "confirmed";
   const svgRef = useRef(null); const wrapRef = useRef(null);
   const [dragId, setDragId] = useState(null);
+  const [drag, setDrag] = useState(null);   /* an event being dragged in time: { id, start, patch } */
+  const dragRef = useRef(null); const movedRef = useRef(false);
   const [focusParty, setFocusParty] = useState(null);
   const [hoverParty, setHoverParty] = useState(null);
   const [hoverAdd, setHoverAdd] = useState(null);
@@ -909,15 +917,42 @@ function MapView({ events, subEvents, parties, places, resolved, selId, setSelId
   const trunkEvent = s => collapse && isFullTrunk(s) && s.type !== "travel";
 
   const byEvent = {}; events.forEach(s => { byEvent[s.id] = s; });
+  /* while an event is dragged, everything is worked out as if it had already moved, so followers ride along and fixed times stay put */
+  const resolved = drag ? resolveAll(events.map(s => (s.id === drag.id ? { ...s, ...drag.patch } : s)), subEvents) : resolvedProp;
   const placed = events.filter(s => { const r = resolved[s.id]; return matches(s) && r && r.start != null && r.end != null && s.location && colIndex[s.location] != null; });
   const placedIds = new Set(placed.map(s => s.id));
   const shownSubEvents = subEvents.filter(m => { const host = byEvent[m.event]; const r = resolved[m.id]; return host && placedIds.has(host.id) && matches(m) && r && r.start != null; });
   const skipped = (events.length - placed.length) + (subEvents.length - shownSubEvents.length);
 
+  /* call times: a group is called before an event starts, so its line begins early. A time set on the event wins, otherwise the group's default call time belongs to the first event it is on at or after that time. */
+  const partyById = {}; parties.forEach(p => { partyById[p.id] = p; });
+  const callDefault = {};
+  parties.forEach(p => {
+    if (p.callTime == null) return;
+    const cand = placed.filter(s => s.type === "event" && (s.parties || []).includes(p.id) && resolvedProp[s.id] && resolvedProp[s.id].start != null && resolvedProp[s.id].start >= p.callTime)
+      .sort((a, b) => resolvedProp[a.id].start - resolvedProp[b.id].start);
+    if (cand[0]) callDefault[p.id] = cand[0].id;
+  });
+  const callMap = {};   /* event id -> { party id -> call minute } */
+  placed.forEach(s => {
+    if (!editableProp || s.type !== "event" || trunkEvent(s)) return;   /* call times are private planning details, so only editors see them */
+    const r = resolved[s.id];
+    (s.parties || []).forEach(pid => {
+      if (rankOf[pid] == null) return;
+      let c = (s.callTimes && s.callTimes[pid] != null) ? s.callTimes[pid] : (callDefault[pid] === s.id ? partyById[pid].callTime : null);
+      if (c == null) return;
+      placed.forEach(o => { if (o.id !== s.id && (o.parties || []).includes(pid)) { const ro = resolved[o.id]; if (ro.end <= r.start && ro.end > c) c = ro.end; } });   /* never reach back into what the group was doing before */
+      if (c < r.start) (callMap[s.id] = callMap[s.id] || {})[pid] = c;
+    });
+  });
+  const firstMin = s => Math.min(resolved[s.id].start, ...Object.values(callMap[s.id] || {}));
+
   let tMin = Infinity, tMax = -Infinity;
-  placed.forEach(s => { const r = resolved[s.id]; tMin = Math.min(tMin, r.start); tMax = Math.max(tMax, r.end); });
+  placed.forEach(s => { const r = resolvedProp[s.id] || resolved[s.id]; tMin = Math.min(tMin, firstMin(s), r.start); tMax = Math.max(tMax, r.end); });
   if (!isFinite(tMin)) { tMin = 480; tMax = 1020; }
+  if (editableProp) { tMin = Math.max(0, tMin - 30); tMax += 30; }   /* room to drag the first and last events */
   if (tMax - tMin < 60) tMax = tMin + 60;
+  if (drag) { tMin = drag.tMin; tMax = drag.tMax; }   /* keep the map still while dragging */
   const yFor = m => PAD_TOP + (m - tMin) * PXM;
   const xAt = (s, pid) => trunkEvent(s) ? (colX(colIndex[s.location]) - BUNDLE_SHIFT) : (colX(colIndex[s.location]) + trackOff(pid));
 
@@ -941,7 +976,7 @@ function MapView({ events, subEvents, parties, places, resolved, selId, setSelId
       const pids = new Set(); cluster.forEach(s => (s.parties || []).forEach(p => { if (rankOf[p] != null) pids.add(p); }));
       if (pids.size >= 2) {
         const offs = [...pids].map(p => trackOff(p)); const cx = colX(colIndex[loc]);
-        const s0 = Math.min(...cluster.map(s => resolved[s.id].start)); const e0 = Math.max(...cluster.map(s => resolved[s.id].end));
+        const s0 = Math.min(...cluster.map(s => firstMin(s))); const e0 = Math.max(...cluster.map(s => resolved[s.id].end));
         capsules.push({ x1: cx + Math.min(...offs), x2: cx + Math.max(...offs), y1: yFor(s0), y2: yFor(e0) });
       }
       cluster = []; clusterEnd = -Infinity;
@@ -958,7 +993,8 @@ function MapView({ events, subEvents, parties, places, resolved, selId, setSelId
       if (rankOf[pid] == null) return;
       const destX = xAt(s, pid);
       const xin = isTravel ? (origin ? (colX(colIndex[origin]) + trackOff(pid)) : destX) : destX;
-      partyNodes[pid].push({ start: r.start, end: r.end, xin, yin: yFor(r.start), xout: destX, yout: yFor(r.end) });
+      const cs = callMap[s.id] && callMap[s.id][pid];
+      partyNodes[pid].push({ start: cs != null ? cs : r.start, end: r.end, xin, yin: yFor(cs != null ? cs : r.start), xout: destX, yout: yFor(r.end) });
     });
   });
   const connectors = [];
@@ -968,6 +1004,34 @@ function MapView({ events, subEvents, parties, places, resolved, selId, setSelId
     for (let i = 0; i < arr.length - 1; i++) { const a = arr[i], b = arr[i + 1]; if (Math.abs(a.xout - b.xin) < 0.5 && Math.abs(a.yout - b.yin) < 0.5) continue; connectors.push({ x1: a.xout, y1: a.yout, x2: b.xin, y2: b.yin, col, pid }); }
   });
 
+  function evDown(e, s) {
+    if (!editable || (e.button && e.button > 0)) return;
+    const r0 = resolvedProp[s.id];
+    if (!r0 || r0.start == null || r0.end == null || !moveEventPatch(s, resolvedProp, r0.start)) return;
+    try { e.currentTarget.setPointerCapture(e.pointerId); } catch (_) {}
+    dragRef.current = { id: s.id, y0: e.clientY, start0: r0.start, dur: r0.end - r0.start, moved: false, tMin, tMax };
+  }
+  function evMove(e) {
+    const d = dragRef.current; if (!d || !svgRef.current) return;
+    const rect = svgRef.current.getBoundingClientRect(); const scaleY = rect.height ? ((height - HEAD_H) / rect.height) : 1;
+    const dy = (e.clientY - d.y0) * scaleY;
+    if (!d.moved && Math.abs(dy) < 4) return;
+    d.moved = true; setHoverAdd(null);
+    let ns = d.start0 + Math.round(dy / PXM / 5) * 5;
+    ns = Math.max(0, d.tMin, Math.min(d.tMax - d.dur, ns));
+    const patch = moveEventPatch(byEvent[d.id], resolvedProp, ns); if (!patch) return;
+    d.last = { start: ns, patch };   /* kept here too, so a quick release still lands where the pointer was */
+    setDrag(prev => (prev && prev.start === ns && prev.id === d.id) ? prev : { id: d.id, start: ns, patch, tMin: d.tMin, tMax: d.tMax });
+  }
+  function evUp() {
+    const d = dragRef.current; dragRef.current = null; if (!d || !d.moved) return;
+    movedRef.current = true; setTimeout(() => { movedRef.current = false; }, 0);   /* the click that follows a drag is not a selection */
+    if (d.last && d.last.start !== d.start0) onMoveEvent(d.id, d.last.patch);
+    setDrag(null);
+  }
+  function evCancel() { dragRef.current = null; setDrag(null); }
+  const pick = id => { if (!movedRef.current) setSelId(id); };
+  const evDrag = s => ({ onPointerDown: e => evDown(e, s), onPointerMove: evMove, onPointerUp: evUp, onPointerCancel: evCancel });
   function headerDown(e, id) { if (!editable) return; try { e.currentTarget.setPointerCapture(e.pointerId); } catch (_) {} setDragId(id); e.preventDefault(); }
   function headerMove(e) {
     if (!dragId || !svgRef.current) return;
@@ -989,7 +1053,7 @@ function MapView({ events, subEvents, parties, places, resolved, selId, setSelId
     const y = (clientY - rect.top) * scaleY + HEAD_H; const mins = Math.round((((y - PAD_TOP) / PXM) + tMin) / 5) * 5;
     return Math.max(0, Math.min(1435, mins));
   }
-  function bandMove(e, col) { if (!editable || dragId) return; setHoverAdd({ col, mins: yToMins(e.clientY) }); }
+  function bandMove(e, col) { if (!editable || dragId || dragRef.current) return; setHoverAdd({ col, mins: yToMins(e.clientY) }); }
   function bandLeave() { setHoverAdd(null); }
   function fitToDay() { const wrap = wrapRef.current; const avail = wrap ? wrap.clientHeight - 24 : 600; const span = (tMax - tMin) || 60; const z = (avail - PAD_TOP - PAD_BOTTOM) / (span * PXM_BASE); setZoom(Math.max(0.25, Math.min(3, z))); }
   const zoomBy = f => setZoom(z => Math.max(0.25, Math.min(3, z * f)));
@@ -1046,7 +1110,7 @@ function MapView({ events, subEvents, parties, places, resolved, selId, setSelId
         ))}
       </div>
       <p className="map-hint">{editable
-        ? "Tip: click a line where something happens to put a moment on it, or click empty space in a column to add an event. Click a group in the key to focus its line. Drag a column header to reorder places."
+        ? "Tip: drag an event up or down to change its time, click a line where something happens to put a moment on it, or click empty space in a column to add an event. Click a group in the key to focus its line. Drag a column header to reorder places."
         : "Tip: click a group in the key to focus its line, or use Focus to follow one group through the day."}</p>
       <div className="map-wrap" ref={wrapRef}>
         <svg className="mapsvg mapsvg-head" width={width} height={HEAD_H} viewBox={"0 0 " + width + " " + HEAD_H} aria-hidden="true">
@@ -1054,7 +1118,7 @@ function MapView({ events, subEvents, parties, places, resolved, selId, setSelId
         <g key={"hdr" + pl.id} style={{ cursor: editable ? "grab" : "default" }} className="col-header"
           onPointerDown={e => headerDown(e, pl.id)} onPointerMove={headerMove} onPointerUp={headerUp}>
           <rect x={colX(i) - COL_GAP * 0.46} y={4} width={COL_GAP * 0.92} height={HEAD_H - 8} rx={6}
-            style={{ fill: dragId === pl.id ? "var(--accent-soft)" : "var(--surface)", stroke: dragId === pl.id ? "var(--accent)" : "var(--border)" }} strokeWidth="1" />
+            style={{ fill: dragId === pl.id ? "var(--accent-soft)" : "var(--surface)", stroke: dragId === pl.id ? "var(--accent)" : "var(--border)", touchAction: editable ? "none" : "auto" }} strokeWidth="1" />
           <text x={colX(i)} y={28} textAnchor="middle" fontSize="15" fontWeight="700" style={{ fill: "var(--ink)", pointerEvents: "none" }}>{trunc(pl.name, 19)}<title>{pl.name}</title></text>
           {editable ? (
             <g style={{ pointerEvents: "none" }}>
@@ -1106,7 +1170,7 @@ function MapView({ events, subEvents, parties, places, resolved, selId, setSelId
             if (trunkEvent(s)) {
               const cx = colX(colIndex[s.location]) - BUNDLE_SHIFT;
               return (
-                <g key={s.id} style={{ cursor: "pointer" }} onClick={() => setSelId(s.id)}>
+                <g key={s.id} style={{ cursor: editable ? "grab" : "pointer", touchAction: editable ? "none" : "auto" }} onClick={() => pick(s.id)} {...evDrag(s)}>
                   {sel ? <line x1={cx} y1={y1} x2={cx} y2={y2} style={{ stroke: "var(--accent)" }} strokeOpacity="0.3" strokeWidth={st.w + 10} strokeLinecap="round" /> : null}
                   <line x1={cx} y1={y1} x2={cx} y2={y2} style={{ stroke: "var(--ink)" }} strokeWidth={st.w} strokeDasharray={st.dash} strokeLinecap="round" />
                   <circle cx={cx} cy={y1} r={st.w / 2 + 2} style={{ fill: "var(--surface)", stroke: "var(--ink)" }} strokeWidth="2.5" />
@@ -1116,20 +1180,22 @@ function MapView({ events, subEvents, parties, places, resolved, selId, setSelId
               );
             }
             return (
-              <g key={s.id} style={{ cursor: "pointer" }} onClick={() => setSelId(s.id)}>
+              <g key={s.id} style={{ cursor: editable ? "grab" : "pointer", touchAction: editable ? "none" : "auto" }} onClick={() => pick(s.id)} {...evDrag(s)}>
                 {(s.parties || []).map(pid => {
                   if (rankOf[pid] == null) return null;
                   const col = colorOf[pid] || "#888"; const dx = xAt(s, pid); const d = dimOf(pid);
                   const hoverH = { onMouseEnter: () => setHoverParty(pid), onMouseLeave: () => setHoverParty(null) };
                   const origin = (isTravel && s.follows && byEvent[s.follows] && byEvent[s.follows].location && colIndex[byEvent[s.follows].location] != null) ? byEvent[s.follows].location : null;
                   const sx = isTravel ? (origin ? (colX(colIndex[origin]) + trackOff(pid)) : dx) : dx;
+                  const cs = callMap[s.id] && callMap[s.id][pid]; const yTop = cs != null ? yFor(cs) : y1;   /* the line starts at the call time */
                   return (
                     <g key={pid} {...hoverH}>
-                      {sel ? <line x1={sx} y1={y1} x2={dx} y2={y2} style={{ stroke: "var(--accent)" }} strokeOpacity={0.32 * d} strokeWidth={st.w + 10} strokeLinecap="round" /> : null}
-                      <line x1={sx} y1={y1} x2={dx} y2={y2} stroke={col} strokeWidth={st.w} strokeOpacity={st.op * d} strokeDasharray={st.dash} strokeLinecap="round" />
+                      {sel ? <line x1={sx} y1={yTop} x2={dx} y2={y2} style={{ stroke: "var(--accent)" }} strokeOpacity={0.32 * d} strokeWidth={st.w + 10} strokeLinecap="round" /> : null}
+                      <line x1={sx} y1={yTop} x2={dx} y2={y2} stroke={col} strokeWidth={st.w} strokeOpacity={st.op * d} strokeDasharray={st.dash} strokeLinecap="round" />
+                      {cs != null ? <circle cx={dx} cy={yTop} r={3.4} fill={col} fillOpacity={st.op * d} /> : null}
                       {!isTravel ? <circle cx={dx} cy={y1} r={st.w / 2 + 2} fill="var(--surface)" stroke={col} strokeWidth="2.5" strokeOpacity={st.op * d} /> : null}
                       {!isTravel ? <circle cx={dx} cy={y2} r={st.w / 2 + 2} fill="var(--surface)" stroke={col} strokeWidth="2.5" strokeOpacity={st.op * d} /> : null}
-                      <title>{eventName(s, places) + ", " + fmtTime(r.start) + " to " + fmtTime(r.end) + ", " + statusText(s.status, !editableProp)}</title>
+                      <title>{eventName(s, places) + ", " + fmtTime(r.start) + " to " + fmtTime(r.end) + (cs != null ? ", " + ((partyById[pid] && partyById[pid].name) || "group") + " called at " + fmtTime(cs) : "") + ", " + statusText(s.status, !editableProp)}</title>
                     </g>
                   );
                 })}
@@ -1148,7 +1214,7 @@ function MapView({ events, subEvents, parties, places, resolved, selId, setSelId
             const txt = (m.name || "unnamed moment") + " " + fmtTime(r.start);
             const labelX = maxX + 11; const shown = fitText(txt, colRightEdge(host.location) - labelX - 6); const w = shown.length * PER_CHAR + 13;
             return (
-              <g key={"mo" + m.id} style={{ cursor: "pointer" }} onClick={() => setSelId(m.id)}>
+              <g key={"mo" + m.id} style={{ cursor: "pointer" }} onClick={() => pick(m.id)}>
                 {pids.length > 1 ? <line x1={minX} y1={y1} x2={maxX} y2={y1} style={{ stroke: sel ? "var(--accent)" : "var(--muted)" }} strokeWidth={sel ? 3 : 2} strokeOpacity="0.5" strokeLinecap="round" /> : null}
                 {isSpan && pids.length > 1 ? <line x1={minX} y1={y2} x2={maxX} y2={y2} style={{ stroke: sel ? "var(--accent)" : "var(--muted)" }} strokeWidth={sel ? 2 : 1.5} strokeOpacity="0.35" strokeLinecap="round" strokeDasharray="3 3" /> : null}
                 {pids.map(pid => {
@@ -1187,6 +1253,17 @@ function MapView({ events, subEvents, parties, places, resolved, selId, setSelId
             );
           })}
 
+          {drag && resolved[drag.id] && resolved[drag.id].start != null ? (() => {
+            const s = byEvent[drag.id]; const r = resolved[drag.id]; const txt = fmtTime(r.start) + " to " + fmtTime(r.end);
+            const cx = colX(colIndex[s.location]); const w = txt.length * 6.6 + 20; const y = yFor(r.start) - 30;
+            return (
+              <g style={{ pointerEvents: "none" }}>
+                <rect x={cx - w / 2} y={y} width={w} height={22} rx={11} style={{ fill: "var(--accent)" }} />
+                <text x={cx} y={y + 15} textAnchor="middle" fontSize="13.5" fontWeight="700" style={{ fill: "#fff" }}>{txt}</text>
+              </g>
+            );
+          })() : null}
+
           {focusParty ? focusLabels.map(it => {
             const w = it.text.length * PER_CHAR + 14;
             return (
@@ -1211,6 +1288,7 @@ function MapView({ events, subEvents, parties, places, resolved, selId, setSelId
         <span className="li"><svg width="18" height="14" aria-hidden="true"><circle cx="9" cy="7" r="4.5" style={{ fill: "var(--surface)", stroke: "var(--ink)" }} strokeWidth="2" /></svg> moment on a line</span>
         <span className="li"><svg width="18" height="14" aria-hidden="true"><circle cx="9" cy="7" r="4.5" style={{ fill: "var(--surface)", stroke: "var(--ink)" }} strokeWidth="3.4" /></svg> fixed-time moment</span>
         <span className="li"><svg width="18" height="14" aria-hidden="true"><circle cx="9" cy="7" r="3.2" style={{ fill: "var(--surface)", stroke: "var(--ink)" }} strokeWidth="1.6" strokeOpacity="0.7" /></svg> where a moment ends</span>
+        {editableProp ? <span className="li"><svg width="18" height="14" aria-hidden="true"><circle cx="9" cy="7" r="3.4" style={{ fill: "var(--ink)" }} /></svg> call time, where the line starts</span> : null}
         <span className="li"><svg width="34" height="10" aria-hidden="true"><line x1="2" y1="5" x2="32" y2="5" style={{ stroke: "var(--ink)" }} strokeWidth="2.5" strokeOpacity="0.32" strokeDasharray="1 7" strokeLinecap="round" /></svg> continues, not planned</span>
       </div>
     </div>
@@ -2233,7 +2311,7 @@ function App() {
         </React.Fragment>
       ) : view === "map" ? (
         <MapView events={events} subEvents={subEvents} parties={parties} places={places} resolved={resolved} selId={selId} setSelId={setSelId}
-          collapse={collapseTrunk} showLabels={showLabels} onMovePlaceTo={movePlaceTo} onAddEvent={addEvent} onAddSubEvent={addSubEvent} filter={filter} editable={editable} onExpandedChange={setMapFs} />
+          collapse={collapseTrunk} showLabels={showLabels} onMovePlaceTo={movePlaceTo} onMoveEvent={updateEvent} onAddEvent={addEvent} onAddSubEvent={addSubEvent} filter={filter} editable={editable} onExpandedChange={setMapFs} />
       ) : (
       <fieldset className="edit-scope" disabled={!editable}>
       <div className="table-wrap">
