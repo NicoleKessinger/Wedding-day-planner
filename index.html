@@ -1,0 +1,1854 @@
+<!doctype html><html><head><meta charset="utf8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Wedding Day Lines</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<style>
+  :root{color-scheme:light}
+  html{scroll-padding-top:env(safe-area-inset-top,0px)}
+  body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#faf9f5;color:#141413}
+  img{max-width:100%}
+  [hidden]:not([hidden=until-found i]){display:none!important}
+  :root {
+    --bg: #f5f7fa; --surface: #ffffff; --surface-2: #eef1f6; --ink: #171c26; --muted: #5b6577; --faint: #8b95a7;
+    --border: #dde2ec; --border-strong: #c3cad8; --accent: #2f6fed; --accent-soft: #e4edfd;
+    --confirmed: #1f2a3d; --provisional: #7c88a0; --unbooked: #b45309;
+    --warn-bg: #fff4e5; --warn-ink: #9a4a06; --warn-border: #f0c088; --danger: #b91c1c; --good: #0f766e;
+    --font-ui: "IBM Plex Sans", system-ui, -apple-system, sans-serif;
+    --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #10131a; --surface: #191d27; --surface-2: #212734; --ink: #e7ebf3; --muted: #9aa4b6; --faint: #6b7488;
+      --border: #2b323f; --border-strong: #3a4353; --accent: #6f9bff; --accent-soft: #1e2740;
+      --confirmed: #d3dae8; --provisional: #8b96ac; --unbooked: #f0a862;
+      --warn-bg: #2e2413; --warn-ink: #f0c088; --warn-border: #5a4526; --danger: #f2807a; --good: #4bb3a6;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #10131a; --surface: #191d27; --surface-2: #212734; --ink: #e7ebf3; --muted: #9aa4b6; --faint: #6b7488;
+    --border: #2b323f; --border-strong: #3a4353; --accent: #6f9bff; --accent-soft: #1e2740;
+    --confirmed: #d3dae8; --provisional: #8b96ac; --unbooked: #f0a862;
+    --warn-bg: #2e2413; --warn-ink: #f0c088; --warn-border: #5a4526; --danger: #f2807a; --good: #4bb3a6;
+  }
+  * { box-sizing: border-box; }
+  body { background: var(--bg); color: var(--ink); font-family: var(--font-ui); margin: 0; }
+  #root { padding: 0; }
+  .app { max-width: 1400px; margin: 0 auto; padding: 20px 16px 64px; }
+
+  fieldset.edit-scope { border: 0; margin: 0; padding: 0; min-inline-size: 0; }
+  .authbar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .mode-chip { font-size: 11px; font-weight: 600; padding: 3px 10px; border-radius: 20px; text-transform: uppercase; letter-spacing: 0.05em; }
+  .mode-chip.view { background: var(--surface-2); color: var(--muted); border: 1px solid var(--border); }
+  .mode-chip.edit { background: var(--accent-soft); color: var(--accent); border: 1px solid var(--accent); }
+  .who { font-size: 12px; color: var(--muted); font-family: var(--font-mono); }
+  .save-status { font-size: 12px; font-family: var(--font-mono); color: var(--muted); }
+  .save-status.saved { color: var(--good); }
+  .save-status.error { color: var(--danger); }
+  .signin-screen { max-width: 480px; margin: 90px auto; text-align: center; padding: 0 16px; }
+  .signin-screen h1 { font-size: 26px; margin: 0 0 10px; letter-spacing: -0.01em; }
+  .signin-screen p { color: var(--muted); line-height: 1.6; margin: 0 0 22px; }
+  .loading-screen { max-width: 480px; margin: 110px auto; text-align: center; color: var(--muted); font-size: 15px; }
+  .banner { border: 1px solid var(--warn-border); background: var(--warn-bg); color: var(--warn-ink); border-radius: 10px; padding: 10px 14px; font-size: 13px; margin-bottom: 16px; line-height: 1.5; }
+
+  header.topbar {
+    display: flex; align-items: flex-end; justify-content: space-between;
+    gap: 16px; flex-wrap: wrap; padding-bottom: 14px; margin-bottom: 18px; border-bottom: 2px solid var(--border-strong);
+  }
+  .brand { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+  .brand h1 { font-size: 22px; font-weight: 700; margin: 0; letter-spacing: -0.01em; }
+  .brand .tag { font-size: 12px; color: var(--muted); font-family: var(--font-mono); }
+  .counts { font-size: 12px; color: var(--muted); font-family: var(--font-mono); display: flex; gap: 14px; }
+  .counts b { color: var(--ink); font-weight: 600; }
+
+  .overview { display: flex; gap: 18px; flex-wrap: wrap; align-items: center; justify-content: space-between; padding: 12px 14px; margin-bottom: 16px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface); }
+  .ov-stats { display: flex; gap: 22px; flex-wrap: wrap; }
+  .ov-stat { display: flex; flex-direction: column; gap: 2px; }
+  .ov-k { font-size: 10px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); font-weight: 600; }
+  .ov-v { font-size: 13px; color: var(--ink); font-weight: 500; }
+  .ov-v.mono { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+  .ov-roll { display: flex; flex-direction: column; gap: 6px; min-width: 240px; flex: 1; max-width: 420px; }
+  .roll-bar { display: flex; height: 12px; border-radius: 20px; overflow: hidden; background: var(--surface-2); border: 1px solid var(--border); }
+  .roll-bar span { display: block; height: 100%; }
+  .seg-confirmed { background: var(--good); }
+  .seg-provisional { background: var(--provisional); }
+  .seg-unbooked { background: var(--unbooked); }
+  .roll-key { display: flex; gap: 14px; flex-wrap: wrap; font-size: 11.5px; color: var(--muted); }
+  .rk { display: inline-flex; align-items: center; gap: 6px; font-variant-numeric: tabular-nums; }
+  .rk-dot { width: 9px; height: 9px; border-radius: 50%; display: inline-block; }
+  .rk-dot.c { background: var(--good); } .rk-dot.p { background: var(--provisional); } .rk-dot.u { background: var(--unbooked); }
+  .btn:disabled { opacity: 0.4; cursor: default; }
+  .btn:disabled:hover { border-color: var(--border); }
+
+  .modal-scrim { position: fixed; inset: 0; background: rgba(15,20,28,0.5); z-index: 80; display: flex; align-items: center; justify-content: center; padding: 20px; }
+  .modal { background: var(--surface); border: 1px solid var(--border-strong); border-radius: 12px; box-shadow: 0 18px 50px rgba(0,0,0,0.28); max-width: 440px; width: 100%; padding: 20px; }
+  .modal h3 { margin: 0 0 8px; font-size: 16px; font-weight: 600; }
+  .modal-lead { margin: 0 0 8px; font-size: 13px; color: var(--muted); }
+  .modal-lines { margin: 0 0 16px; padding-left: 18px; font-size: 13px; color: var(--ink); line-height: 1.5; }
+  .modal-lines li { margin: 4px 0; }
+  .modal-actions { display: flex; justify-content: flex-end; gap: 8px; }
+  .danger-btn.solid { background: var(--danger); color: #fff; border-color: var(--danger); }
+  .danger-btn.solid:hover { filter: brightness(1.05); border-color: var(--danger); }
+
+  .viewbar { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; margin-bottom: 16px; }
+  .seg { display: inline-flex; border: 1px solid var(--border-strong); border-radius: 8px; overflow: hidden; }
+  .seg-btn { font-family: var(--font-ui); font-size: 13px; font-weight: 500; padding: 7px 18px; border: none; background: var(--surface); color: var(--muted); cursor: pointer; }
+  .seg-btn:not(.on):hover { color: var(--ink); }
+  .seg-btn.on { background: var(--accent); color: #fff; }
+  .chk { display: inline-flex; align-items: center; gap: 7px; font-size: 13px; color: var(--muted); cursor: pointer; }
+  .chk input { cursor: pointer; }
+
+  .map-controls { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; margin-bottom: 10px; }
+  .mc-group { display: inline-flex; align-items: center; gap: 6px; }
+  .zoom-pct { font-family: var(--font-mono); font-size: 12px; color: var(--muted); min-width: 40px; text-align: center; }
+  .seg.sm .seg-btn { padding: 5px 11px; font-size: 12px; }
+  .mc-focus { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--muted); }
+  .mc-focus .cell-select { border: 1px solid var(--border-strong); border-radius: 7px; padding: 5px 8px; background: var(--surface); }
+  .party-legend { display: flex; flex-wrap: wrap; gap: 6px 16px; margin-bottom: 10px; font-size: 12px; color: var(--muted); }
+  .pl-item { display: inline-flex; align-items: center; gap: 6px; }
+  .pl-item.clickable { cursor: pointer; padding: 2px 8px; border-radius: 20px; border: 1px solid transparent; }
+  .pl-item.clickable:hover { border-color: var(--border-strong); }
+  .pl-item.on { border-color: var(--accent); background: var(--accent-soft); color: var(--ink); font-weight: 600; }
+  .pl-item.dim { opacity: 0.4; }
+  .pl-dot { width: 11px; height: 11px; border-radius: 50%; display: inline-block; }
+  .col-header { cursor: grab; }
+  .col-header:active { cursor: grabbing; }
+  .map-wrap { overflow: auto; border: 1px solid var(--border); border-radius: 10px; background: var(--surface); max-height: 74vh; }
+  .mapsvg { display: block; }
+  .mapsvg text { font-family: var(--font-ui); }
+  .mapsvg text.tlabel { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+  .map-hint { font-size: 12px; color: var(--muted); margin: 0 0 10px; line-height: 1.5; }
+  .col-band { cursor: crosshair; }
+  .col-band:hover { opacity: 0.7 !important; }
+  .map-note { font-size: 12px; color: var(--muted); margin: 10px 0 0; line-height: 1.5; }
+  .legend { display: flex; gap: 18px; flex-wrap: wrap; align-items: center; margin-top: 14px; font-size: 12px; color: var(--muted); }
+  .legend .li { display: inline-flex; align-items: center; gap: 7px; }
+
+  .toolbar { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 14px; align-items: center; }
+  button.btn { font-family: var(--font-ui); font-size: 13px; font-weight: 500; padding: 7px 12px; border-radius: 7px; border: 1px solid var(--border-strong); background: var(--surface); color: var(--ink); cursor: pointer; line-height: 1.2; }
+  button.btn:hover { border-color: var(--accent); }
+  button.btn.primary { background: var(--accent); color: #fff; border-color: var(--accent); }
+  button.btn.primary:hover { filter: brightness(1.05); }
+  button.btn.subtle { background: transparent; border-color: var(--border); color: var(--muted); }
+  button.btn:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+  .spacer { flex: 1; }
+
+  .manager { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 18px; }
+  @media (max-width: 860px) { .manager { grid-template-columns: 1fr; } }
+  .mgr-card { border: 1px solid var(--border); border-radius: 10px; background: var(--surface); padding: 14px; }
+  .mgr-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+  .mgr-head h3 { margin: 0; font-size: 14px; font-weight: 600; }
+  .party-list, .place-list { display: flex; flex-direction: column; gap: 6px; }
+  .party-row, .place-row { display: flex; align-items: center; gap: 8px; }
+  .color-input { width: 32px; height: 30px; padding: 0; border: 1px solid var(--border); border-radius: 6px; background: none; cursor: pointer; flex: none; }
+  .mgr-name { flex: 1; border: 1px solid var(--border) !important; }
+  .lane-label { font-size: 11px; color: var(--muted); font-family: var(--font-mono); white-space: nowrap; }
+  .icon-btn:disabled { opacity: 0.35; cursor: default; }
+  .icon-btn:disabled:hover { border-color: var(--border); color: var(--muted); }
+  .mgr-note { margin: 10px 0 0; font-size: 11.5px; color: var(--muted); line-height: 1.5; }
+  .matrix-title { margin: 14px 0 6px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); }
+  .matrix-wrap { overflow-x: auto; }
+  table.matrix { border-collapse: collapse; font-size: 12px; }
+  table.matrix th, table.matrix td { border: 1px solid var(--border); padding: 3px 6px; text-align: center; white-space: nowrap; }
+  table.matrix th { background: var(--surface-2); font-weight: 600; color: var(--muted); font-size: 11px; }
+  table.matrix th.corner { font-weight: 500; font-family: var(--font-mono); }
+  .cell-input.mtx { width: 58px; text-align: center; font-family: var(--font-mono); border: 1px solid var(--border) !important; }
+  .diag { color: var(--faint); }
+
+  .table-wrap { overflow-x: auto; border: 1px solid var(--border); border-radius: 10px; background: var(--surface); }
+  table.grid { border-collapse: collapse; width: 100%; min-width: 1180px; font-size: 13px; table-layout: auto; }
+  table.grid th { text-align: left; font-size: 10.5px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); padding: 9px 10px; border-bottom: 1px solid var(--border); background: var(--surface-2); position: sticky; top: 0; white-space: nowrap; }
+  table.grid td { padding: 6px 8px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  table.grid tr:last-child td { border-bottom: none; }
+  table.grid tr.sel td { background: var(--accent-soft); }
+
+  .cell-input, .cell-select { width: 100%; font-family: var(--font-ui); font-size: 13px; color: var(--ink); background: transparent; border: 1px solid transparent; border-radius: 5px; padding: 4px 6px; }
+  .cell-input:hover, .cell-select:hover { border-color: var(--border); }
+  .cell-input:focus, .cell-select:focus { border-color: var(--accent); background: var(--surface); }
+  .cell-input:disabled, .cell-select:disabled { opacity: 1; color: var(--ink); }
+  .cell-input.time, .cell-input.dur, .cell-num { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+  td.col-start, td.col-dur, td.col-end { font-family: var(--font-mono); font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .end-val { padding: 4px 6px; color: var(--muted); }
+  .end-val.unset { color: var(--faint); }
+
+  tr.section-row td { background: var(--surface-2); color: var(--muted); font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.07em; padding: 7px 10px; border-bottom: 1px solid var(--border-strong); position: sticky; }
+  .start-cell { display: flex; align-items: center; gap: 5px; }
+  .pin-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--accent); flex: none; }
+  .auto-chip { font-size: 9px; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted); border: 1px solid var(--border); border-radius: 10px; padding: 1px 5px; flex: none; }
+  .cell-input.time.pinned { color: var(--ink); font-weight: 600; }
+  .cell-input.time.inherited { color: var(--muted); }
+  .cell-input.time.inherited::placeholder { color: var(--muted); opacity: 1; }
+  .end-field { display: inline-block; min-width: 74px; padding: 5px 8px; border: 1px solid var(--border); border-radius: 6px; background: var(--surface-2); color: var(--ink); font-family: var(--font-mono); font-variant-numeric: tabular-nums; font-weight: 600; }
+  .end-field.unset { color: var(--faint); font-weight: 400; }
+
+  .type-pill { display: inline-block; font-size: 11px; font-family: var(--font-mono); }
+  select.cell-select { cursor: pointer; }
+
+  .parties-cell { display: flex; flex-wrap: wrap; gap: 4px; min-width: 150px; }
+  .pchip { font-size: 11px; padding: 2px 7px; border-radius: 20px; cursor: pointer; border: 1px solid var(--border); background: var(--surface); color: var(--muted); white-space: nowrap; line-height: 1.4; display: inline-flex; align-items: center; gap: 5px; }
+  .pchip .dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+  .pchip.on { color: #fff; border-color: transparent; font-weight: 500; }
+  .pchip.on .dot { box-shadow: 0 0 0 1.5px rgba(255,255,255,0.55); }
+  fieldset.edit-scope:disabled .pchip { cursor: default; }
+
+  .status-sel { border-radius: 20px; padding: 2px 8px; font-size: 11.5px; font-weight: 500; border: 1px solid var(--border-strong); }
+  .st-confirmed { color: var(--good); } .st-provisional { color: var(--muted); } .st-unbooked { color: var(--unbooked); }
+
+  td.col-warn { width: 30px; text-align: center; }
+  .warnflag { color: var(--warn-ink); cursor: default; font-family: var(--font-mono); font-size: 13px; }
+  .row-actions { display: flex; gap: 4px; }
+  .icon-btn { border: 1px solid var(--border); background: var(--surface); color: var(--muted); width: 26px; height: 26px; border-radius: 6px; cursor: pointer; font-size: 13px; line-height: 1; display: inline-flex; align-items: center; justify-content: center; }
+  .icon-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .icon-btn.danger:hover { border-color: var(--danger); color: var(--danger); }
+
+  .warnings-panel { margin-top: 14px; border: 1px solid var(--warn-border); background: var(--warn-bg); border-radius: 10px; padding: 12px 14px; font-size: 13px; }
+  .warnings-panel h3 { margin: 0 0 8px; font-size: 12px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--warn-ink); }
+  .warnings-panel ul { margin: 0; padding-left: 18px; color: var(--warn-ink); }
+  .warnings-panel li { margin: 3px 0; line-height: 1.45; }
+  .warnings-panel li b { font-weight: 600; }
+  .no-warn { color: var(--good); font-size: 13px; margin-top: 12px; display: flex; align-items: center; gap: 7px; }
+
+  .io { margin-top: 26px; display: grid; grid-template-columns: 1fr; gap: 16px; }
+  .io-card { border: 1px solid var(--border); border-radius: 10px; background: var(--surface); padding: 14px; }
+  .io-card h3 { margin: 0 0 4px; font-size: 14px; font-weight: 600; }
+  .io-card p { margin: 0 0 10px; font-size: 12px; color: var(--muted); line-height: 1.5; }
+  .io-row { display: flex; gap: 8px; align-items: center; margin-top: 8px; flex-wrap: wrap; }
+  .foot { margin-top: 30px; font-size: 12px; color: var(--faint); line-height: 1.6; }
+  .foot b { color: var(--muted); font-weight: 600; }
+
+  .app.with-inspector { padding-right: 356px; }
+  @media (max-width: 900px) { .app.with-inspector { padding-right: 16px; } }
+  .inspector { position: fixed; top: 0; right: 0; height: 100vh; width: 340px; max-width: 92vw; background: var(--surface); border-left: 1px solid var(--border); box-shadow: -10px 0 30px rgba(0,0,0,0.14); z-index: 50; display: flex; flex-direction: column; }
+  .insp-head { display: flex; align-items: center; justify-content: space-between; padding: 14px 16px; border-bottom: 1px solid var(--border); }
+  .insp-head h3 { margin: 0; font-size: 15px; font-weight: 600; }
+  .insp-body { padding: 14px 16px 24px; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; }
+  .insp-scope { border: 0; margin: 0; padding: 0; min-inline-size: 0; display: flex; flex-direction: column; gap: 12px; }
+  .fld { display: flex; flex-direction: column; gap: 4px; }
+  .fld > span { font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); font-weight: 600; }
+  .fld2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .cell-input.bx, .cell-select.bx { border: 1px solid var(--border-strong); background: var(--surface); border-radius: 7px; padding: 7px 9px; width: 100%; }
+  .cell-input.bx:focus, .cell-select.bx:focus { border-color: var(--accent); }
+  .insp-parties { min-width: 0; }
+  .insp-end { font-family: var(--font-mono); font-size: 13px; color: var(--ink); }
+  .insp-end em { color: var(--faint); font-style: normal; font-size: 11px; margin-left: 6px; }
+  .insp-notes { min-height: 64px; resize: vertical; font-family: var(--font-ui); }
+  .insp-warn { background: var(--warn-bg); border: 1px solid var(--warn-border); border-radius: 8px; padding: 10px 12px; }
+  .insp-warn h4 { margin: 0 0 6px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--warn-ink); }
+  .insp-warn ul { margin: 0; padding-left: 16px; color: var(--warn-ink); font-size: 12.5px; }
+  .insp-warn li { margin: 3px 0; line-height: 1.4; }
+  .insp-ok { color: var(--good); font-size: 12.5px; }
+  .insp-actions { display: flex; gap: 8px; margin-top: 4px; padding-top: 12px; border-top: 1px solid var(--border); }
+  .danger-btn { color: var(--danger); border-color: var(--border-strong); }
+  .danger-btn:hover { border-color: var(--danger); }
+
+  .ev-cell { display: flex; align-items: center; gap: 4px; min-width: 240px; }
+  .ev-cell .cell-input { width: 100%; min-width: 210px; }
+  table.grid td.col-name, table.grid th.col-name { width: 260px; }
+  table.grid td.col-parties { max-width: 210px; }
+  .child-tick { color: var(--faint); font-size: 13px; flex: none; }
+  .btn.sm { font-size: 12px; padding: 5px 9px; }
+  .insp-parent { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; background: var(--surface-2); border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px; font-size: 12px; }
+  .insp-parent > span { color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; font-size: 10px; font-weight: 600; }
+  .link-btn { border: none; background: none; color: var(--accent); font-family: var(--font-ui); font-size: 13px; font-weight: 600; cursor: pointer; padding: 0; }
+  .link-btn:hover { text-decoration: underline; }
+  .insp-inherit { font-size: 13px; color: var(--ink); padding: 7px 2px; }
+  .insp-inherit em { color: var(--faint); font-style: normal; font-size: 11px; margin-left: 6px; }
+  .insp-subs { border-top: 1px solid var(--border); padding-top: 12px; }
+  .insp-subs-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+  .insp-subs-head > span { font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); font-weight: 600; }
+  .sub-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+  .sub-item { width: 100%; display: flex; align-items: center; gap: 8px; text-align: left; background: var(--surface-2); border: 1px solid var(--border); border-radius: 7px; padding: 6px 8px; cursor: pointer; font-family: var(--font-ui); }
+  .sub-item:hover { border-color: var(--accent); }
+  .sub-kind { font-size: 9.5px; text-transform: uppercase; letter-spacing: 0.04em; font-weight: 600; padding: 2px 6px; border-radius: 20px; flex: none; }
+  .sub-kind.moment { background: var(--accent-soft); color: var(--accent); }
+  .sub-kind.phase { background: var(--surface); border: 1px solid var(--border-strong); color: var(--muted); }
+  .sub-name { flex: 1; font-size: 13px; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .sub-time { font-family: var(--font-mono); font-size: 11px; color: var(--muted); flex: none; }
+  .sub-empty { font-size: 12px; color: var(--muted); line-height: 1.5; margin: 4px 0 0; }
+  .after-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .after-row .cell-select.bx { flex: 1; min-width: 140px; }
+  .after-gap { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; color: var(--muted); }
+  .after-gap .plus, .after-mini .plus { color: var(--muted); font-weight: 600; }
+  .after-cell { display: flex; align-items: center; gap: 5px; }
+  .after-mini { display: inline-flex; align-items: center; gap: 3px; font-size: 11px; color: var(--muted); font-family: var(--font-mono); }
+  .vendor-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .links-list { display: flex; flex-direction: column; gap: 6px; }
+  .link-row { display: flex; gap: 6px; align-items: center; }
+  .link-row .cell-input.bx:first-child { flex: 0 0 34%; }
+  .link-row .cell-input.bx:nth-child(2) { flex: 1; }
+  .calltimes { display: flex; flex-direction: column; gap: 6px; }
+  .ct-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+  .ct-name { display: inline-flex; align-items: center; gap: 7px; font-size: 13px; color: var(--ink); }
+  .ct-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; flex: none; }
+  .ct-hint { margin: 4px 0 0; font-size: 11px; color: var(--faint); line-height: 1.4; }
+  .loc-details { display: flex; flex-direction: column; gap: 6px; }
+  .loc-name { font-size: 13px; font-weight: 600; color: var(--ink); }
+  .party-defaults { border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px; }
+  .party-defaults summary { cursor: pointer; font-size: 12px; color: var(--muted); font-weight: 600; }
+  .pd-list { display: flex; flex-direction: column; gap: 6px; margin-top: 8px; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore-compat.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.3.1/umd/react.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.3.1/umd/react-dom.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.26.4/babel.min.js"></script>
+
+<script type="text/babel" data-presets="react">
+/* =======================================================================
+   CONFIG. Edit the three things in this block, then save the file.
+   1. firebaseConfig: paste the values from your Firebase project settings.
+   2. EDITOR_EMAILS: the Google account emails allowed to edit. Everyone
+      else who opens the link can view only.
+   3. PLAN_ID: leave as is unless you want more than one separate timeline.
+   Until firebaseConfig is filled in, the page runs in local preview mode:
+   it works, but nothing is saved.
+   ======================================================================= */
+const firebaseConfig = {
+  apiKey: "AIzaSyBgV2YEe9sZOLo0Qb8bUT5V7lgvzG_MUNQ",
+  authDomain: "wedding-day-planner-b691b.firebaseapp.com",
+  projectId: "wedding-day-planner-b691b",
+  storageBucket: "wedding-day-planner-b691b.firebasestorage.app",
+  messagingSenderId: "296317026420",
+  appId: "1:296317026420:web:d43a1339bdb4d4e3a41121",
+};
+const EDITOR_EMAILS = [
+  "nicolekessinger1@gmail.com",
+  "michaelfeminella1@gmail.com",
+  "kessingerfeminellawedding@gmail.com",
+];
+const PLAN_ID = "our-wedding";
+/* ===================== end of things to edit ===================== */
+
+const CONFIG_FILLED_IN = !!firebaseConfig.apiKey && !/PASTE/.test(firebaseConfig.apiKey);
+const FIREBASE_SCRIPTS_LOADED = typeof firebase !== "undefined";
+const LOCAL_MODE = !CONFIG_FILLED_IN || !FIREBASE_SCRIPTS_LOADED;
+const FIREBASE_LOAD_FAILED = CONFIG_FILLED_IN && !FIREBASE_SCRIPTS_LOADED;
+let db = null, auth = null;
+if (!LOCAL_MODE) {
+  firebase.initializeApp(firebaseConfig);
+  db = firebase.firestore();
+  auth = firebase.auth();
+}
+const emailAllowed = em => !!em && EDITOR_EMAILS.map(e => e.toLowerCase()).includes(em.toLowerCase());
+
+const { useState, useMemo, useRef, useEffect } = React;
+
+/* ---------- id generator: stable, never reused ---------- */
+let __seq = 0;
+function newId(prefix) { __seq += 1; return prefix + "_" + Date.now().toString(36) + "_" + __seq.toString(36); }
+
+/* ---------- time helpers: minutes from midnight <-> 12h am/pm ---------- */
+function fmtTime(mins) {
+  if (mins === null || mins === undefined) return "";
+  let m = ((mins % 1440) + 1440) % 1440;
+  let h = Math.floor(m / 60); let mm = m % 60;
+  const ap = h < 12 ? "am" : "pm";
+  let h12 = h % 12; if (h12 === 0) h12 = 12;
+  return h12 + ":" + String(mm).padStart(2, "0") + " " + ap;
+}
+function parseTime(str) {
+  if (str === null || str === undefined) return null;
+  const t = String(str).trim().toLowerCase();
+  if (t === "") return null;
+  const m = t.match(/^(\d{1,2})(?::(\d{2}))?\s*(am|pm)?$/);
+  if (!m) return undefined;
+  let h = parseInt(m[1], 10); let min = m[2] ? parseInt(m[2], 10) : 0; const ap = m[3];
+  if (min > 59 || h > 23) return undefined;
+  if (ap) { if (h < 1 || h > 12) return undefined; if (ap === "pm" && h < 12) h += 12; if (ap === "am" && h === 12) h = 0; }
+  return h * 60 + min;
+}
+
+/* ---------- drive time lookup ---------- */
+function driveTime(places, fromId, toId) {
+  if (!fromId || !toId || fromId === toId) return null;
+  const p = places.find(x => x.id === fromId);
+  if (p && p.drives && p.drives[toId] != null) return p.drives[toId];
+  const q = places.find(x => x.id === toId);
+  if (q && q.drives && q.drives[fromId] != null) return q.drives[fromId];
+  return null;
+}
+
+/* ---------- names ---------- */
+function eventName(s, places) {
+  if (!s) return "";
+  if (s.label) return s.label;
+  const p = places.find(x => x.id === s.location);
+  const where = p ? p.name : "no place set";
+  return s.type === "travel" ? ("travel to " + where) : where;
+}
+/* ---------- resolve the follows chain on events, cycle safe ---------- */
+function resolveEvents(events) {
+  const byId = {};
+  events.forEach(s => { byId[s.id] = s; });
+  const cache = {}; const state = {};
+  function resolve(id) {
+    if (state[id] === "done") return cache[id];
+    const s = byId[id];
+    if (!s) return { start: null, end: null };
+    if (state[id] === "visiting") { cache[id] = { start: null, end: null, cyclic: true }; state[id] = "done"; return cache[id]; }
+    state[id] = "visiting";
+    let start = null; let cyclic = false;
+    if (s.start !== null && s.start !== undefined) { start = s.start; }
+    else if (s.follows) { const f = resolve(s.follows); if (f.cyclic) cyclic = true; start = (f.end === null || f.end === undefined) ? null : f.end + (s.gap || 0); }
+    const dur = (s.duration === null || s.duration === undefined) ? 0 : s.duration;
+    const end = (start === null || start === undefined) ? null : start + dur;
+    cache[id] = { start: (start === undefined ? null : start), end, cyclic }; state[id] = "done"; return cache[id];
+  }
+  const out = {};
+  events.forEach(s => { out[s.id] = resolve(s.id); });
+  return out;
+}
+
+function resolveAll(events, subEvents) {
+  const out = resolveEvents(events);
+  subEvents.forEach(mo => {
+    const host = out[mo.event];
+    let start = null;
+    if (mo.pinned) { start = (mo.start === null || mo.start === undefined) ? null : mo.start; }
+    else if (host && host.start != null) { start = host.start + (mo.offset || 0); }
+    const dur = (mo.duration === null || mo.duration === undefined) ? 0 : mo.duration;
+    out[mo.id] = { start, end: start == null ? null : start + dur };
+  });
+  return out;
+}
+
+function hasCycle(events, startId) {
+  const byId = {};
+  events.forEach(s => { byId[s.id] = s; });
+  const seen = new Set(); let cur = byId[startId];
+  while (cur && cur.follows) { if (seen.has(cur.id)) return true; seen.add(cur.id); if (cur.follows === startId) return true; cur = byId[cur.follows]; }
+  return false;
+}
+
+/* ---------- validation ---------- */
+function validateEvent(event, events, places, resolved) {
+  const msgs = [];
+  const byId = {};
+  events.forEach(s => { byId[s.id] = s; });
+  if (event.follows && hasCycle(events, event.id)) msgs.push("This event follows a chain that loops back to itself, so its time cannot be worked out.");
+  if (event.location && !places.find(p => p.id === event.location)) msgs.push("Place is not in the places list.");
+  if (!event.location) msgs.push("No place set.");
+  if (!(event.parties || []).length) msgs.push("Nobody is on this event, so it draws no line.");
+  if (event.start !== null && event.start !== undefined && event.follows) {
+    const fRes = resolved[event.follows];
+    if (fRes && fRes.end !== null && fRes.end !== undefined && event.start < fRes.end) {
+      const f = byId[event.follows];
+      msgs.push("Pinned start " + fmtTime(event.start) + " is before " + (f ? eventName(f, places) : "the earlier event") + " ends at " + fmtTime(fRes.end) + ".");
+    }
+  }
+  if (event.type === "travel" && event.follows) {
+    const f = byId[event.follows];
+    if (f && f.location && event.location) {
+      const dt = driveTime(places, f.location, event.location);
+      if (dt !== null && event.duration !== null && event.duration !== undefined && event.duration < dt)
+        msgs.push("Duration " + event.duration + " min is shorter than the " + dt + " min drive between these two places.");
+    }
+  }
+  return msgs;
+}
+
+function validateSubEvent(mo, events, parties, resolved, places) {
+  const msgs = [];
+  const host = events.find(s => s.id === mo.event);
+  if (!host) { msgs.push("This sub event is not on an event, so it has no line to sit on."); return msgs; }
+  const hr = resolved[host.id] || {}; const r = resolved[mo.id] || {};
+  if (hr.start != null && hr.end != null && r.start != null) {
+    const end = r.end != null ? r.end : r.start;
+    if (r.start < hr.start || end > hr.end)
+      msgs.push("This runs " + fmtTime(r.start) + " to " + fmtTime(end) + ", outside " + eventName(host, places) + ", which runs " + fmtTime(hr.start) + " to " + fmtTime(hr.end) + ".");
+  }
+  (mo.parties || []).forEach(pid => {
+    if (!(host.parties || []).includes(pid)) { const p = parties.find(x => x.id === pid); msgs.push((p ? p.name : "A party") + " is on this sub event but not on " + eventName(host, places) + "."); }
+  });
+  if (!(mo.parties || []).length) msgs.push("Nobody is on this sub event, so it draws no node.");
+  return msgs;
+}
+
+/* ---------- normalize, including migration from the old single stops array ---------- */
+function normVendor(v) { v = v || {}; return { name: v.name || "", contact: v.contact || "", phone: v.phone || "", email: v.email || "" }; }
+function normLinks(l) { return Array.isArray(l) ? l.map(x => ({ label: (x && x.label) || "", url: (x && x.url) || "" })) : []; }
+function normEvent(s) {
+  return {
+    id: s.id || newId("ev"), type: s.type === "travel" ? "travel" : "event",
+    label: s.label !== undefined ? (s.label || "") : (s.event || ""),
+    parties: Array.isArray(s.parties) ? s.parties : [],
+    location: s.location !== undefined ? s.location : null,
+    follows: s.follows !== undefined ? s.follows : null,
+    gap: s.gap !== undefined ? s.gap : null,
+    start: s.start !== undefined ? s.start : null,
+    duration: (s.duration === null || s.duration === undefined) ? 0 : s.duration,
+    buffer: s.buffer !== undefined ? s.buffer : null,
+    status: s.status || "provisional", owner: s.owner || "",
+    vendor: normVendor(s.vendor), links: normLinks(s.links),
+    callTimes: (s.callTimes && typeof s.callTimes === "object") ? { ...s.callTimes } : {}, notes: s.notes || "",
+  };
+}
+function normSubEvent(m) {
+  const pinned = !!m.pinned;
+  return {
+    id: m.id || newId("sub"), name: m.name || "",
+    event: m.event !== undefined ? m.event : (m.stay !== undefined ? m.stay : (m.parent !== undefined ? m.parent : null)),
+    parties: Array.isArray(m.parties) ? m.parties : [], pinned,
+    start: pinned ? (m.start === undefined ? null : m.start) : null,
+    offset: pinned ? 0 : (m.offset == null ? 0 : m.offset),
+    duration: (m.duration === null || m.duration === undefined) ? 0 : m.duration,
+    status: m.status || "provisional", owner: m.owner || "",
+    vendor: normVendor(m.vendor), links: normLinks(m.links),
+    callTimes: (m.callTimes && typeof m.callTimes === "object") ? { ...m.callTimes } : {}, notes: m.notes || "",
+  };
+}
+function normPlace(p) { return { id: p.id, name: p.name || "", drives: p.drives || {}, address: p.address || "", contact: p.contact || "" }; }
+function normParty(p) { return { id: p.id, name: p.name || "", color: p.color || "#6b7280", laneOrder: p.laneOrder || 0, callTime: p.callTime !== undefined ? p.callTime : null }; }
+
+function migrateStops(stops) {
+  const byId = {};
+  stops.forEach(s => { byId[s.id] = s; });
+  const legacyRes = resolveEvents(stops);
+  const isChild = s => !!(s.parent && byId[s.parent]);
+  const events = []; const subEvents = []; const pending = [];
+  stops.forEach(s => {
+    if (isChild(s)) { pending.push(s); return; }
+    if (s.type === "arrival") { pending.push(s); return; }
+    events.push(normEvent(s));
+  });
+  const eventRes = resolveEvents(events);
+  function hostFor(s) {
+    if (s.parent && events.find(x => x.id === s.parent)) return events.find(x => x.id === s.parent);
+    const r = legacyRes[s.id] || {};
+    if (r.start == null) return null;
+    const share = pid => (s.parties || []).length === 0 || (s.parties || []).includes(pid);
+    const covering = events.filter(x => {
+      const xr = eventRes[x.id] || {};
+      if (xr.start == null || xr.end == null) return false;
+      if (s.location && x.location && s.location !== x.location) return false;
+      if (!(x.parties || []).some(share)) return false;
+      return r.start >= xr.start && r.start <= xr.end;
+    });
+    return covering.length ? covering[0] : null;
+  }
+  pending.forEach(s => {
+    const host = hostFor(s); const r = legacyRes[s.id] || {};
+    if (!host) { events.push(normEvent({ ...s, type: "event", duration: s.type === "arrival" ? 0 : s.duration, parent: null })); return; }
+    const hr = eventRes[host.id] || {};
+    const pinned = s.start !== null && s.start !== undefined;
+    subEvents.push(normSubEvent({
+      id: s.id, name: s.event || "", event: host.id,
+      parties: (s.parties && s.parties.length) ? s.parties.filter(p => (host.parties || []).includes(p)) : [...(host.parties || [])],
+      pinned, start: pinned ? s.start : null,
+      offset: pinned ? 0 : ((r.start != null && hr.start != null) ? r.start - hr.start : 0),
+      duration: s.type === "arrival" ? 0 : s.duration,
+      status: s.status, owner: s.owner, vendor: s.vendor, links: s.links, callTimes: s.callTimes, notes: s.notes,
+    }));
+  });
+  return { events, subEvents };
+}
+
+function normalizeState(data) {
+  const parties = (data.parties || []).map(normParty);
+  const places = (data.places || []).map(normPlace);
+  if (Array.isArray(data.events) || Array.isArray(data.stays)) {
+    return { events: (data.events || data.stays).map(normEvent), subEvents: (data.subEvents || data.moments || []).map(normSubEvent), parties, places };
+  }
+  const m = migrateStops((data.stops || []).map(s => ({ ...s })));
+  return { events: m.events.map(normEvent), subEvents: m.subEvents.map(normSubEvent), parties, places };
+}
+
+/* ---------- seed data: placeholders only ---------- */
+function seedState() {
+  return {
+    parties: [
+      { id: "p_bride",  name: "Bride and bridesmaids", color: "#2f6fed", laneOrder: 0 },
+      { id: "p_groom",  name: "Groomsmen",              color: "#12a594", laneOrder: 1 },
+      { id: "p_moms",   name: "Mothers",                color: "#b5179e", laneOrder: 2 },
+      { id: "p_guests", name: "Guests",                 color: "#f59e0b", laneOrder: 3 },
+      { id: "p_photo",  name: "Photographer",           color: "#6b7280", laneOrder: 4 },
+    ],
+    places: [
+      { id: "pl_salon",     name: "Salon Patrick",        drives: {} },
+      { id: "pl_hotel",     name: "Cleveland Arcade",     drives: {} },
+      { id: "pl_church",    name: "St. Mary church",      drives: {} },
+      { id: "pl_photo",     name: "Photo location",       drives: {} },
+      { id: "pl_reception", name: "Windows on the River", drives: {} },
+    ],
+    events: [
+      { id: "st1", type: "event",  label: "", parties: ["p_bride","p_moms"], location: "pl_salon",  follows: null, start: 480, duration: 150, status: "unbooked",    notes: "Salon not booked yet. Appointments unknown, so this is a placeholder for the whole morning." },
+      { id: "st2", type: "event",  label: "", parties: ["p_groom"],          location: "pl_hotel",  follows: null, start: 540, duration: 120, status: "confirmed",   notes: "" },
+      { id: "st3", type: "travel", label: "Salon to church", parties: ["p_bride","p_moms"], location: "pl_church", follows: "st1", start: null, duration: 35, status: "provisional", notes: "" },
+      { id: "st4", type: "travel", label: "Hotel to church", parties: ["p_groom"],          location: "pl_church", follows: "st2", start: null, duration: 30, status: "confirmed",   notes: "" },
+      { id: "st5", type: "event",  label: "", parties: ["p_bride","p_groom","p_moms","p_photo"], location: "pl_church", follows: null, start: 690, duration: 60, status: "confirmed", notes: "" },
+      { id: "st6", type: "event",  label: "", parties: ["p_guests"],         location: "pl_church", follows: null, start: 675, duration: 75, status: "provisional", notes: "" },
+      { id: "st7", type: "travel", label: "Church to photos", parties: ["p_bride","p_groom","p_photo"], location: "pl_photo", follows: "st5", start: null, duration: 20, status: "provisional", notes: "" },
+      { id: "st8", type: "event",  label: "", parties: ["p_bride","p_groom","p_photo"], location: "pl_photo", follows: "st7", start: null, duration: 75, status: "unbooked", notes: "Photo location not decided" },
+      { id: "st9", type: "travel", label: "Photos to reception", parties: ["p_bride","p_groom","p_photo"], location: "pl_reception", follows: "st8", start: null, duration: 25, status: "provisional", notes: "" },
+      { id: "st10", type: "event", label: "", parties: ["p_bride","p_groom","p_moms","p_guests","p_photo"], location: "pl_reception", follows: null, start: 900, duration: 240, status: "confirmed", notes: "" },
+    ],
+    subEvents: [
+      { id: "mo1", name: "Bride hair done",        event: "st1",  parties: ["p_bride"], pinned: true,  start: 585, duration: 0, status: "confirmed",   notes: "" },
+      { id: "mo2", name: "Bridesmaid 1 hair done", event: "st1",  parties: ["p_bride"], pinned: false, offset: 135, duration: 0, status: "provisional", notes: "" },
+      { id: "mo3", name: "Guests arrive",          event: "st6",  parties: ["p_guests"], pinned: true, start: 675, duration: 0, status: "provisional", notes: "" },
+      { id: "mo4", name: "Ceremony begins",        event: "st5",  parties: ["p_bride","p_groom","p_moms","p_photo"], pinned: true, start: 690, duration: 45, status: "confirmed", notes: "" },
+      { id: "mo5", name: "Cocktail hour",          event: "st10", parties: ["p_bride","p_groom","p_moms","p_guests","p_photo"], pinned: false, offset: 0,   duration: 60, status: "confirmed",   notes: "" },
+      { id: "mo6", name: "Dinner",                 event: "st10", parties: ["p_bride","p_groom","p_moms","p_guests","p_photo"], pinned: false, offset: 60,  duration: 90, status: "confirmed",   notes: "" },
+      { id: "mo7", name: "Speeches",               event: "st10", parties: ["p_bride","p_groom","p_moms","p_guests","p_photo"], pinned: false, offset: 150, duration: 30, status: "provisional", notes: "" },
+      { id: "mo8", name: "First dance",            event: "st10", parties: ["p_bride","p_groom"], pinned: false, offset: 180, duration: 30, status: "provisional", notes: "" },
+    ],
+  };
+}
+
+/* ---------- CSV export ---------- */
+function csvCell(v) { const s = String(v === null || v === undefined ? "" : v); if (/[",\n]/.test(s)) return '"' + s.replace(/"/g, '""') + '"'; return s; }
+function buildCsv(events, subEvents, parties, places, resolved) {
+  const pName = id => { const p = parties.find(x => x.id === id); return p ? p.name : id; };
+  const plName = id => { const p = places.find(x => x.id === id); return p ? p.name : (id || ""); };
+  const header = ["row","on event","type","name","parties","place","starts after","start","pinned","duration","end","status","owner","vendor","notes"];
+  const lines = [header.map(csvCell).join(",")];
+  const ordered = [];
+  events.slice().sort((a, b) => { const ra = resolved[a.id] || {}, rb = resolved[b.id] || {}; return (ra.start == null ? 1e9 : ra.start) - (rb.start == null ? 1e9 : rb.start); }).forEach(s => {
+    ordered.push({ kind: "event", row: s });
+    subEvents.filter(m => m.event === s.id).sort((a, b) => { const ra = resolved[a.id] || {}, rb = resolved[b.id] || {}; return (ra.start == null ? 1e9 : ra.start) - (rb.start == null ? 1e9 : rb.start); }).forEach(m => ordered.push({ kind: "subEvent", row: m, host: s }));
+  });
+  subEvents.filter(m => !events.find(s => s.id === m.event)).forEach(m => ordered.push({ kind: "subEvent", row: m, host: null }));
+  ordered.forEach(it => {
+    const s = it.row; const r = resolved[s.id] || {};
+    if (it.kind === "event") {
+      const f = events.find(x => x.id === s.follows);
+      lines.push(["event","",s.type,eventName(s, places),(s.parties || []).map(pName).join(" | "),plName(s.location),f ? eventName(f, places) : "",fmtTime(r.start),s.start != null ? "yes" : "no",s.duration,fmtTime(r.end),s.status,s.owner || "",(s.vendor && s.vendor.name) || "",s.notes || ""].map(csvCell).join(","));
+    } else {
+      lines.push(["sub event",it.host ? eventName(it.host, places) : "",s.duration > 0 ? "span" : "point",s.name,(s.parties || []).map(pName).join(" | "),it.host ? plName(it.host.location) : "","",fmtTime(r.start),s.pinned ? "yes" : "no",s.duration,fmtTime(r.end),s.status,s.owner || "",(s.vendor && s.vendor.name) || "",s.notes || ""].map(csvCell).join(","));
+    }
+  });
+  return lines.join("\n");
+}
+/* ================= Map ================= */
+function MapView({ events, subEvents, parties, places, resolved, selId, setSelId, collapse, showLabels, onMovePlaceTo, onAddEvent, onAddSubEvent, filter, editable }) {
+  const matches = s => filter === "all" || !filter || s.status !== "confirmed";
+  const svgRef = useRef(null); const wrapRef = useRef(null);
+  const [dragId, setDragId] = useState(null);
+  const [focusParty, setFocusParty] = useState(null);
+  const [hoverParty, setHoverParty] = useState(null);
+  const [hoverAdd, setHoverAdd] = useState(null);
+  const [zoom, setZoom] = useState(1);
+  const [density, setDensity] = useState("full");
+  const highlight = hoverParty || focusParty;
+
+  const sortedParties = [...parties].sort((a, b) => a.laneOrder - b.laneOrder);
+  const rankOf = {}; sortedParties.forEach((p, i) => { rankOf[p.id] = i; });
+  const nP = sortedParties.length;
+  const colorOf = {}; parties.forEach(p => { colorOf[p.id] = p.color; });
+  const placeName = id => { const p = places.find(x => x.id === id); return p ? p.name : ""; };
+  const colIndex = {}; places.forEach((p, i) => { colIndex[p.id] = i; });
+  const allPartyIds = parties.map(p => p.id);
+  const trunc = (s, n) => (s && s.length > n ? s.slice(0, n - 1) + "…" : (s || ""));
+
+  const PAD_LEFT = 58, COL0 = PAD_LEFT + 76, COL_GAP = 148, PAD_TOP = 62, PAD_BOTTOM = 40, PXM_BASE = 1.05, TRACK_GAP = 16;
+  const PXM = PXM_BASE * zoom;
+  const colX = idx => COL0 + idx * COL_GAP;
+  const BUNDLE_SHIFT = Math.max(0, Math.min(28, COL_GAP * 0.46 - ((nP - 1) / 2) * TRACK_GAP - 8));
+  const trackOff = pid => (rankOf[pid] - (nP - 1) / 2) * TRACK_GAP - BUNDLE_SHIFT;
+  const dimOf = pid => (highlight && pid !== highlight) ? 0.12 : 1;
+
+  function widthFor(status, kind) { if (kind === "travel") return ({ confirmed: 6, provisional: 5, unbooked: 5 }[status] || 5); return ({ confirmed: 13, provisional: 11, unbooked: 11 }[status] || 12); }
+  function styleFor(status, kind) { const w = widthFor(status, kind); const dash = status === "unbooked" ? (kind === "travel" ? "6 6" : "10 7") : "none"; const op = status === "provisional" ? 0.62 : 1; return { w, dash, op }; }
+  const isFullTrunk = s => s.type === "event" && allPartyIds.length > 0 && allPartyIds.every(id => (s.parties || []).includes(id));
+  const trunkEvent = s => collapse && isFullTrunk(s) && s.type !== "travel";
+
+  const byEvent = {}; events.forEach(s => { byEvent[s.id] = s; });
+  const placed = events.filter(s => { const r = resolved[s.id]; return matches(s) && r && r.start != null && r.end != null && s.location && colIndex[s.location] != null; });
+  const placedIds = new Set(placed.map(s => s.id));
+  const shownSubEvents = subEvents.filter(m => { const host = byEvent[m.event]; const r = resolved[m.id]; return host && placedIds.has(host.id) && matches(m) && r && r.start != null; });
+  const skipped = (events.length - placed.length) + (subEvents.length - shownSubEvents.length);
+
+  let tMin = Infinity, tMax = -Infinity;
+  placed.forEach(s => { const r = resolved[s.id]; tMin = Math.min(tMin, r.start); tMax = Math.max(tMax, r.end); });
+  if (!isFinite(tMin)) { tMin = 480; tMax = 1020; }
+  if (tMax - tMin < 60) tMax = tMin + 60;
+  const yFor = m => PAD_TOP + (m - tMin) * PXM;
+  const xAt = (s, pid) => trunkEvent(s) ? (colX(colIndex[s.location]) - BUNDLE_SHIFT) : (colX(colIndex[s.location]) + trackOff(pid));
+
+  const width = Math.max(COL0 + Math.max(0, places.length - 1) * COL_GAP + 150, 340);
+  const height = PAD_TOP + (tMax - tMin) * PXM + PAD_BOTTOM;
+
+  const PER_CHAR = 5.2;
+  const fitText = (txt, maxPx) => { const max = Math.max(24, maxPx); const n = Math.floor(max / PER_CHAR); return (txt && txt.length > n) ? txt.slice(0, Math.max(1, n - 1)) + "…" : (txt || ""); };
+  const colRightEdge = locId => colX(colIndex[locId]) + COL_GAP * 0.5 + (colIndex[locId] === places.length - 1 ? 140 : 0);
+
+  const gridStep = 30; const gridlines = [];
+  for (let m = Math.ceil(tMin / gridStep) * gridStep; m <= tMax; m += gridStep) gridlines.push(m);
+
+  const capsules = []; const byLoc = {};
+  placed.forEach(s => { if (s.type === "event" && !trunkEvent(s)) { (byLoc[s.location] = byLoc[s.location] || []).push(s); } });
+  Object.keys(byLoc).forEach(loc => {
+    const arr = byLoc[loc].slice().sort((a, b) => resolved[a.id].start - resolved[b.id].start);
+    let cluster = [], clusterEnd = -Infinity;
+    const flush = () => {
+      if (cluster.length === 0) return;
+      const pids = new Set(); cluster.forEach(s => (s.parties || []).forEach(p => { if (rankOf[p] != null) pids.add(p); }));
+      if (pids.size >= 2) {
+        const offs = [...pids].map(p => trackOff(p)); const cx = colX(colIndex[loc]);
+        const s0 = Math.min(...cluster.map(s => resolved[s.id].start)); const e0 = Math.max(...cluster.map(s => resolved[s.id].end));
+        capsules.push({ x1: cx + Math.min(...offs), x2: cx + Math.max(...offs), y1: yFor(s0), y2: yFor(e0) });
+      }
+      cluster = []; clusterEnd = -Infinity;
+    };
+    arr.forEach(s => { const r = resolved[s.id]; if (cluster.length === 0 || r.start < clusterEnd) { cluster.push(s); clusterEnd = Math.max(clusterEnd, r.end); } else { flush(); cluster.push(s); clusterEnd = r.end; } });
+    flush();
+  });
+
+  const partyNodes = {}; sortedParties.forEach(p => { partyNodes[p.id] = []; });
+  placed.forEach(s => {
+    const r = resolved[s.id]; const isTravel = s.type === "travel";
+    const origin = (isTravel && s.follows && byEvent[s.follows] && byEvent[s.follows].location && colIndex[byEvent[s.follows].location] != null) ? byEvent[s.follows].location : null;
+    (s.parties || []).forEach(pid => {
+      if (rankOf[pid] == null) return;
+      const destX = xAt(s, pid);
+      const xin = isTravel ? (origin ? (colX(colIndex[origin]) + trackOff(pid)) : destX) : destX;
+      partyNodes[pid].push({ start: r.start, end: r.end, xin, yin: yFor(r.start), xout: destX, yout: yFor(r.end) });
+    });
+  });
+  const connectors = [];
+  Object.keys(partyNodes).forEach(pid => {
+    const arr = partyNodes[pid].sort((a, b) => a.start - b.start || a.end - b.end);
+    const col = colorOf[pid] || "#888";
+    for (let i = 0; i < arr.length - 1; i++) { const a = arr[i], b = arr[i + 1]; if (Math.abs(a.xout - b.xin) < 0.5 && Math.abs(a.yout - b.yin) < 0.5) continue; connectors.push({ x1: a.xout, y1: a.yout, x2: b.xin, y2: b.yin, col, pid }); }
+  });
+
+  function headerDown(e, id) { if (!editable) return; try { e.currentTarget.setPointerCapture(e.pointerId); } catch (_) {} setDragId(id); e.preventDefault(); }
+  function headerMove(e) {
+    if (!dragId || !svgRef.current) return;
+    const rect = svgRef.current.getBoundingClientRect(); const scale = rect.width ? (width / rect.width) : 1;
+    const x = (e.clientX - rect.left) * scale;
+    let idx = Math.round((x - COL0) / COL_GAP); idx = Math.max(0, Math.min(places.length - 1, idx));
+    if (idx !== colIndex[dragId]) onMovePlaceTo(dragId, idx);
+  }
+  function headerUp() { setDragId(null); }
+
+  function bandClick(e, placeId) {
+    if (!editable || dragId || !svgRef.current) return;
+    const mins = yToMins(e.clientY);
+    const hit = placed.find(b => { if (b.location !== placeId || b.type !== "event") return false; const r = resolved[b.id]; return r && r.start != null && r.end != null && mins >= r.start && mins <= r.end; });
+    if (hit) onAddSubEvent(hit.id, mins); else onAddEvent({ location: placeId, start: mins });
+  }
+  function yToMins(clientY) {
+    const rect = svgRef.current.getBoundingClientRect(); const scaleY = rect.height ? (height / rect.height) : 1;
+    const y = (clientY - rect.top) * scaleY; const mins = Math.round((((y - PAD_TOP) / PXM) + tMin) / 5) * 5;
+    return Math.max(0, Math.min(1435, mins));
+  }
+  function bandMove(e, col) { if (!editable || dragId) return; setHoverAdd({ col, mins: yToMins(e.clientY) }); }
+  function bandLeave() { setHoverAdd(null); }
+  function fitToDay() { const wrap = wrapRef.current; const avail = wrap ? wrap.clientHeight - 24 : 600; const span = (tMax - tMin) || 60; const z = (avail - PAD_TOP - PAD_BOTTOM) / (span * PXM_BASE); setZoom(Math.max(0.25, Math.min(3, z))); }
+  const zoomBy = f => setZoom(z => Math.max(0.25, Math.min(3, z * f)));
+
+  const focusLabels = [];
+  if (focusParty && rankOf[focusParty] != null) {
+    const raw = [];
+    placed.filter(s => (s.parties || []).includes(focusParty)).forEach(s => { const r = resolved[s.id]; raw.push({ id: s.id, x: colX(colIndex[s.location]) + trackOff(focusParty), y: yFor(r.start), text: eventName(s, places) + " " + fmtTime(r.start) }); });
+    shownSubEvents.filter(m => (m.parties || []).includes(focusParty)).forEach(m => { const host = byEvent[m.event]; const r = resolved[m.id]; raw.push({ id: m.id, x: xAt(host, focusParty), y: yFor(r.start), text: (m.name || "sub event") + " " + fmtTime(r.start) }); });
+    raw.sort((a, b) => a.y - b.y);
+    let lastY = -1e9; raw.forEach(it => { let ly = it.y; if (ly < lastY + 15) ly = lastY + 15; lastY = ly; focusLabels.push({ ...it, ly }); });
+  }
+
+  return (
+    <div>
+      <div className="map-controls">
+        <div className="mc-group">
+          <button className="btn subtle sm" onClick={() => zoomBy(1 / 1.25)} title="Zoom out">{"−"}</button>
+          <span className="zoom-pct">{Math.round(zoom * 100)}%</span>
+          <button className="btn subtle sm" onClick={() => zoomBy(1.25)} title="Zoom in">{"+"}</button>
+          <button className="btn subtle sm" onClick={fitToDay} title="Fit the whole day to the view">Fit day</button>
+        </div>
+        <div className="seg sm">
+          <button className={"seg-btn" + (density === "full" ? " on" : "")} onClick={() => setDensity("full")}>Full</button>
+          <button className={"seg-btn" + (density === "key" ? " on" : "")} onClick={() => setDensity("key")}>Key sub events</button>
+        </div>
+        <label className="mc-focus">Focus
+          <select className="cell-select" value={focusParty || ""} onChange={e => setFocusParty(e.target.value || null)}>
+            <option value="">everyone</option>
+            {sortedParties.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+          </select>
+        </label>
+      </div>
+      <div className="party-legend">
+        {sortedParties.map(p => (
+          <span key={p.id}
+            className={"pl-item clickable" + (focusParty === p.id ? " on" : "") + (highlight && highlight !== p.id ? " dim" : "")}
+            onClick={() => setFocusParty(focusParty === p.id ? null : p.id)}
+            onMouseEnter={() => setHoverParty(p.id)} onMouseLeave={() => setHoverParty(null)}
+            title={focusParty === p.id ? "Click to clear focus" : "Click to focus this party, hover to highlight"}>
+            <span className="pl-dot" style={{ background: p.color }}></span>{p.name}
+          </span>
+        ))}
+      </div>
+      <p className="map-hint">{editable
+        ? "Tip: click a line where something happens to put a sub event on it, or click empty space in a column to add an event. Click a party in the key to focus its line. Drag a column header to reorder places."
+        : "Tip: click a party in the key to focus its line, or use Focus to follow one group through the day."}</p>
+      <div className="map-wrap" ref={wrapRef}>
+        <svg ref={svgRef} className="mapsvg" width={width} height={height} viewBox={"0 0 " + width + " " + height} role="img" aria-label="Wedding day timeline as a vertical transit map. Time runs top to bottom, each column is a place, and each colored line is a party moving between places.">
+          {places.map((pl, i) => (
+            <rect key={"band" + pl.id} className="col-band" x={colX(i) - COL_GAP * 0.46} y={PAD_TOP - 8} width={COL_GAP * 0.92} height={height - PAD_TOP - PAD_BOTTOM + 8} rx={8}
+              style={{ fill: "var(--surface-2)", cursor: editable ? "crosshair" : "default" }} opacity={dragId === pl.id ? 0.9 : 0.45}
+              onClick={e => bandClick(e, pl.id)} onMouseMove={e => bandMove(e, i)} onMouseLeave={bandLeave}>
+              <title>{editable ? ("Click to add something at " + placeName(pl.id)) : placeName(pl.id)}</title>
+            </rect>
+          ))}
+
+          {hoverAdd && !dragId && editable ? (
+            <g style={{ pointerEvents: "none" }}>
+              <line x1={colX(hoverAdd.col) - COL_GAP * 0.46} y1={yFor(hoverAdd.mins)} x2={colX(hoverAdd.col) + COL_GAP * 0.46} y2={yFor(hoverAdd.mins)} style={{ stroke: "var(--accent)" }} strokeWidth="1.5" strokeDasharray="4 4" strokeOpacity="0.8" />
+              <g transform={"translate(" + (colX(hoverAdd.col) - COL_GAP * 0.46 + 5) + " " + (yFor(hoverAdd.mins) - 9) + ")"}>
+                <rect x="0" y="0" width={fmtTime(hoverAdd.mins).length * 5.6 + 26} height="18" rx="9" style={{ fill: "var(--accent)" }} />
+                <text x="9" y="12.5" fontSize="10.5" fontWeight="600" style={{ fill: "#fff" }}>{"+ " + fmtTime(hoverAdd.mins)}</text>
+              </g>
+            </g>
+          ) : null}
+
+          <g style={{ pointerEvents: "none" }}>
+            {gridlines.map(m => (
+              <g key={"g" + m}>
+                <line x1={PAD_LEFT} y1={yFor(m)} x2={width - 10} y2={yFor(m)} style={{ stroke: "var(--border)" }} strokeWidth="1" strokeOpacity={m % 60 === 0 ? 1 : 0.5} strokeDasharray={m % 60 === 0 ? "none" : "2 6"} />
+                {m % 60 === 0 ? <text className="tlabel" x={PAD_LEFT - 8} y={yFor(m) + 3} textAnchor="end" fontSize="10.5" fontWeight="600" style={{ fill: "var(--muted)" }}>{fmtTime(m)}</text> : null}
+              </g>
+            ))}
+          </g>
+
+          <g style={{ pointerEvents: "none" }}>
+            {capsules.map((c, i) => (<rect key={"c" + i} x={c.x1 - 12} y={c.y1 - 8} width={(c.x2 - c.x1) + 24} height={(c.y2 - c.y1) + 16} rx={14} style={{ fill: "var(--accent-soft)", stroke: "var(--border-strong)" }} strokeWidth="1" opacity="0.9" />))}
+          </g>
+
+          <g style={{ pointerEvents: "none" }}>
+            {connectors.map((c, i) => (<line key={"cn" + i} x1={c.x1} y1={c.y1} x2={c.x2} y2={c.y2} stroke={c.col} strokeWidth="2.5" strokeOpacity={0.32 * dimOf(c.pid)} strokeDasharray="1 7" strokeLinecap="round" />))}
+          </g>
+
+          {placed.map(s => {
+            const r = resolved[s.id]; const isTravel = s.type === "travel"; const kind = isTravel ? "travel" : "stay";
+            const st = styleFor(s.status, kind); const sel = selId === s.id; const y1 = yFor(r.start), y2 = yFor(r.end);
+            if (trunkEvent(s)) {
+              const cx = colX(colIndex[s.location]) - BUNDLE_SHIFT;
+              return (
+                <g key={s.id} style={{ cursor: "pointer" }} onClick={() => setSelId(s.id)}>
+                  {sel ? <line x1={cx} y1={y1} x2={cx} y2={y2} style={{ stroke: "var(--accent)" }} strokeOpacity="0.3" strokeWidth={st.w + 10} strokeLinecap="round" /> : null}
+                  <line x1={cx} y1={y1} x2={cx} y2={y2} style={{ stroke: "var(--ink)" }} strokeWidth={st.w} strokeDasharray={st.dash} strokeLinecap="round" />
+                  <circle cx={cx} cy={y1} r={st.w / 2 + 2} style={{ fill: "var(--surface)", stroke: "var(--ink)" }} strokeWidth="2.5" />
+                  <circle cx={cx} cy={y2} r={st.w / 2 + 2} style={{ fill: "var(--surface)", stroke: "var(--ink)" }} strokeWidth="2.5" />
+                  <title>{eventName(s, places) + ", " + fmtTime(r.start) + " to " + fmtTime(r.end)}</title>
+                </g>
+              );
+            }
+            return (
+              <g key={s.id} style={{ cursor: "pointer" }} onClick={() => setSelId(s.id)}>
+                {(s.parties || []).map(pid => {
+                  if (rankOf[pid] == null) return null;
+                  const col = colorOf[pid] || "#888"; const dx = xAt(s, pid); const d = dimOf(pid);
+                  const hoverH = { onMouseEnter: () => setHoverParty(pid), onMouseLeave: () => setHoverParty(null) };
+                  const origin = (isTravel && s.follows && byEvent[s.follows] && byEvent[s.follows].location && colIndex[byEvent[s.follows].location] != null) ? byEvent[s.follows].location : null;
+                  const sx = isTravel ? (origin ? (colX(colIndex[origin]) + trackOff(pid)) : dx) : dx;
+                  return (
+                    <g key={pid} {...hoverH}>
+                      {sel ? <line x1={sx} y1={y1} x2={dx} y2={y2} style={{ stroke: "var(--accent)" }} strokeOpacity={0.32 * d} strokeWidth={st.w + 10} strokeLinecap="round" /> : null}
+                      <line x1={sx} y1={y1} x2={dx} y2={y2} stroke={col} strokeWidth={st.w} strokeOpacity={st.op * d} strokeDasharray={st.dash} strokeLinecap="round" />
+                      {!isTravel ? <circle cx={dx} cy={y1} r={st.w / 2 + 2} fill="var(--surface)" stroke={col} strokeWidth="2.5" strokeOpacity={st.op * d} /> : null}
+                      {!isTravel ? <circle cx={dx} cy={y2} r={st.w / 2 + 2} fill="var(--surface)" stroke={col} strokeWidth="2.5" strokeOpacity={st.op * d} /> : null}
+                      <title>{eventName(s, places) + ", " + fmtTime(r.start) + " to " + fmtTime(r.end) + ", " + s.status}</title>
+                    </g>
+                  );
+                })}
+              </g>
+            );
+          })}
+
+          {shownSubEvents.map(m => {
+            if (density === "key" && m.duration === 0 && !m.pinned) return null;
+            const host = byEvent[m.event]; const r = resolved[m.id];
+            const y1 = yFor(r.start), y2 = yFor(r.end != null ? r.end : r.start);
+            const isSpan = m.duration > 0 && y2 > y1 + 0.5; const sel = selId === m.id;
+            const pids = (m.parties || []).filter(pid => rankOf[pid] != null && (host.parties || []).includes(pid));
+            if (!pids.length) return null;
+            const xs = pids.map(pid => xAt(host, pid)); const minX = Math.min(...xs), maxX = Math.max(...xs);
+            const txt = (m.name || "unnamed sub event") + " " + fmtTime(r.start);
+            const labelX = maxX + 11; const shown = fitText(txt, colRightEdge(host.location) - labelX - 6); const w = shown.length * PER_CHAR + 11;
+            return (
+              <g key={"mo" + m.id} style={{ cursor: "pointer" }} onClick={() => setSelId(m.id)}>
+                {pids.length > 1 ? <line x1={minX} y1={y1} x2={maxX} y2={y1} style={{ stroke: sel ? "var(--accent)" : "var(--muted)" }} strokeWidth={sel ? 3 : 2} strokeOpacity="0.5" strokeLinecap="round" /> : null}
+                {isSpan && pids.length > 1 ? <line x1={minX} y1={y2} x2={maxX} y2={y2} style={{ stroke: sel ? "var(--accent)" : "var(--muted)" }} strokeWidth={sel ? 2 : 1.5} strokeOpacity="0.35" strokeLinecap="round" strokeDasharray="3 3" /> : null}
+                {pids.map(pid => {
+                  const x = xAt(host, pid);
+                  return (
+                    <g key={pid} opacity={dimOf(pid)} onMouseEnter={() => setHoverParty(pid)} onMouseLeave={() => setHoverParty(null)}>
+                      {sel ? <circle cx={x} cy={y1} r={9.5} style={{ fill: "var(--accent)" }} opacity="0.3" /> : null}
+                      <circle cx={x} cy={y1} r={5.4} fill="var(--surface)" stroke={colorOf[pid] || "var(--ink)"} strokeWidth={m.pinned ? 4 : 3} />
+                      {isSpan ? <circle cx={x} cy={y2} r={3.8} fill="var(--surface)" stroke={colorOf[pid] || "var(--ink)"} strokeWidth="2" strokeOpacity="0.7" /> : null}
+                    </g>
+                  );
+                })}
+                <title>{(m.name || "unnamed sub event") + ", " + fmtTime(r.start) + (isSpan && r.end != null ? " to " + fmtTime(r.end) : "") + ", on " + eventName(host, places) + (m.pinned ? ", pinned" : ", floats with the event")}</title>
+                {((showLabels && !highlight) || sel) ? (
+                  <g style={{ pointerEvents: "none" }}>
+                    <rect x={labelX} y={y1 - 8} width={w} height={16} rx={3} style={{ fill: "var(--surface)", stroke: sel ? "var(--accent)" : "var(--border)" }} strokeWidth="1" opacity="0.96" />
+                    <text x={labelX + 5} y={y1 + 3.5} fontSize="10" fontWeight={sel ? "700" : "500"} style={{ fill: "var(--ink)" }}>{shown}</text>
+                  </g>
+                ) : null}
+              </g>
+            );
+          })}
+
+          {placed.map(s => {
+            const sel = selId === s.id; if (!sel && (!showLabels || highlight)) return null;
+            const r = resolved[s.id];
+            const offs = (s.parties || []).filter(p => rankOf[p] != null).map(p => trackOff(p));
+            const rightX = colX(colIndex[s.location]) + (offs.length ? Math.max(...offs) : 0);
+            const y = yFor(r.start); const txt = eventName(s, places) + " " + fmtTime(r.start);
+            const lx = rightX + 10; const shown = fitText(txt, colRightEdge(s.location) - lx - 6); const w = shown.length * PER_CHAR + 12;
+            return (
+              <g key={"lbl" + s.id} style={{ pointerEvents: "none" }}>
+                <rect x={lx} y={y - 9} width={w} height={18} rx={3} style={{ fill: "var(--surface)", stroke: sel ? "var(--accent)" : "var(--border)" }} strokeWidth="1" opacity="0.95" />
+                <text x={lx + 6} y={y + 3.5} fontSize="10.5" fontWeight={sel ? "700" : "600"} style={{ fill: "var(--ink)" }}>{shown}</text>
+              </g>
+            );
+          })}
+
+          {focusParty ? focusLabels.map(it => {
+            const w = it.text.length * PER_CHAR + 12;
+            return (
+              <g key={"fl" + it.id} style={{ pointerEvents: "none" }}>
+                <line x1={it.x} y1={it.y} x2={it.x + 9} y2={it.ly} style={{ stroke: colorOf[focusParty] || "var(--ink)" }} strokeWidth="1" strokeOpacity="0.6" />
+                <rect x={it.x + 9} y={it.ly - 9} width={w} height={18} rx={5} style={{ fill: "var(--surface)", stroke: colorOf[focusParty] || "var(--border)" }} strokeWidth="1.3" />
+                <text x={it.x + 15} y={it.ly + 3.5} fontSize="10.5" fontWeight="600" style={{ fill: "var(--ink)" }}>{it.text}</text>
+              </g>
+            );
+          }) : null}
+
+          {places.map((pl, i) => (
+            <g key={"hdr" + pl.id} style={{ cursor: editable ? "grab" : "default" }} className="col-header"
+              onPointerDown={e => headerDown(e, pl.id)} onPointerMove={headerMove} onPointerUp={headerUp}>
+              <rect x={colX(i) - COL_GAP * 0.46} y={4} width={COL_GAP * 0.92} height={PAD_TOP - 12} rx={6}
+                style={{ fill: dragId === pl.id ? "var(--accent-soft)" : "var(--surface)", stroke: dragId === pl.id ? "var(--accent)" : "var(--border)" }} strokeWidth="1" />
+              <text x={colX(i)} y={30} textAnchor="middle" fontSize="11.5" fontWeight="700" style={{ fill: "var(--ink)", pointerEvents: "none" }}>{trunc(pl.name, 16)}<title>{pl.name}</title></text>
+              {editable ? (
+                <g style={{ pointerEvents: "none" }}>
+                  {[0, 1, 2].map(gx => [0, 1].map(gy => (<circle key={gx + "-" + gy} cx={colX(i) - 5 + gx * 5} cy={42 + gy * 5} r={1.3} style={{ fill: "var(--faint)" }} />)))}
+                </g>
+              ) : null}
+            </g>
+          ))}
+        </svg>
+      </div>
+
+      {skipped > 0 ? (<p className="map-note">{skipped} {skipped === 1 ? "row is" : "rows are"} not shown because they have no time, no place, or no event to sit on.</p>) : null}
+
+      <div className="legend">
+        <span className="li"><svg width="34" height="10" aria-hidden="true"><line x1="2" y1="5" x2="32" y2="5" style={{ stroke: "var(--ink)" }} strokeWidth="7" strokeLinecap="round" /></svg> confirmed</span>
+        <span className="li"><svg width="34" height="10" aria-hidden="true"><line x1="2" y1="5" x2="32" y2="5" style={{ stroke: "var(--ink)" }} strokeWidth="5" strokeOpacity="0.62" strokeLinecap="round" /></svg> provisional</span>
+        <span className="li"><svg width="34" height="10" aria-hidden="true"><line x1="2" y1="5" x2="32" y2="5" style={{ stroke: "var(--ink)" }} strokeWidth="5" strokeDasharray="10 7" strokeLinecap="round" /></svg> unbooked</span>
+        <span className="li"><svg width="40" height="16" aria-hidden="true"><line x1="4" y1="13" x2="36" y2="3" style={{ stroke: "var(--ink)" }} strokeWidth="3" strokeLinecap="round" /></svg> travel between places</span>
+        <span className="li"><svg width="18" height="14" aria-hidden="true"><circle cx="9" cy="7" r="4.5" style={{ fill: "var(--surface)", stroke: "var(--ink)" }} strokeWidth="2" /></svg> sub event on a line</span>
+        <span className="li"><svg width="18" height="14" aria-hidden="true"><circle cx="9" cy="7" r="4.5" style={{ fill: "var(--surface)", stroke: "var(--ink)" }} strokeWidth="3.4" /></svg> pinned sub event</span>
+        <span className="li"><svg width="18" height="14" aria-hidden="true"><circle cx="9" cy="7" r="3.2" style={{ fill: "var(--surface)", stroke: "var(--ink)" }} strokeWidth="1.6" strokeOpacity="0.7" /></svg> where a sub event ends</span>
+        <span className="li"><svg width="34" height="10" aria-hidden="true"><line x1="2" y1="5" x2="32" y2="5" style={{ stroke: "var(--ink)" }} strokeWidth="2.5" strokeOpacity="0.32" strokeDasharray="1 7" strokeLinecap="round" /></svg> continues, not planned</span>
+      </div>
+    </div>
+  );
+}
+
+/* ================= shared editor bits ================= */
+function VendorBlock({ row, onUpdate }) {
+  const vendor = row.vendor || { name: "", contact: "", phone: "", email: "" };
+  const links = row.links || [];
+  return (
+    <React.Fragment>
+      <div className="fld"><span>Vendor</span>
+        <div className="vendor-grid">
+          <input className="cell-input bx" placeholder="name" value={vendor.name} onChange={e => onUpdate({ vendor: { ...vendor, name: e.target.value } })} />
+          <input className="cell-input bx" placeholder="contact" value={vendor.contact} onChange={e => onUpdate({ vendor: { ...vendor, contact: e.target.value } })} />
+          <input className="cell-input bx" placeholder="phone" value={vendor.phone} onChange={e => onUpdate({ vendor: { ...vendor, phone: e.target.value } })} />
+          <input className="cell-input bx" placeholder="email" value={vendor.email} onChange={e => onUpdate({ vendor: { ...vendor, email: e.target.value } })} />
+        </div>
+      </div>
+      <div className="fld"><span>Links</span>
+        <div className="links-list">
+          {links.map((l, i) => (
+            <div className="link-row" key={i}>
+              <input className="cell-input bx" placeholder="label" value={l.label} onChange={e => { const nl = links.map((x, j) => j === i ? { ...x, label: e.target.value } : x); onUpdate({ links: nl }); }} />
+              <input className="cell-input bx" placeholder="https://" value={l.url} onChange={e => { const nl = links.map((x, j) => j === i ? { ...x, url: e.target.value } : x); onUpdate({ links: nl }); }} />
+              <button className="icon-btn danger" title="Remove link" onClick={() => onUpdate({ links: links.filter((_, j) => j !== i) })}>{"✕"}</button>
+            </div>
+          ))}
+          <button className="btn subtle sm" onClick={() => onUpdate({ links: [...links, { label: "", url: "" }] })}>Add link</button>
+        </div>
+      </div>
+    </React.Fragment>
+  );
+}
+
+function CallTimes({ row, parties, onUpdate }) {
+  const callTimes = row.callTimes || {};
+  if (!(row.parties || []).length) return <div className="fld"><span>Call times</span><div className="insp-inherit"><em>Add parties to set their call times.</em></div></div>;
+  return (
+    <div className="fld"><span>Call times</span>
+      <div className="calltimes">
+        {(row.parties || []).map(pid => {
+          const party = parties.find(p => p.id === pid); if (!party) return null;
+          const val = callTimes[pid];
+          return (
+            <div className="ct-row" key={pid}>
+              <span className="ct-name"><span className="ct-dot" style={{ background: party.color }}></span>{party.name}</span>
+              <input className="cell-input bx time" style={{ width: "96px" }} key={pid + "_" + (val == null ? "n" : val)} defaultValue={val == null ? "" : fmtTime(val)}
+                placeholder={party.callTime != null ? fmtTime(party.callTime) : "call time"}
+                onBlur={e => { const v = parseTime(e.target.value); if (v === undefined) { e.target.value = val == null ? "" : fmtTime(val); return; } const ct = { ...callTimes }; if (v === null) delete ct[pid]; else ct[pid] = v; onUpdate({ callTimes: ct }); }}
+                onKeyDown={e => { if (e.key === "Enter") e.target.blur(); }} />
+            </div>
+          );
+        })}
+        <p className="ct-hint">The greyed time is each party's default call time. Type here to set one just for this row.</p>
+      </div>
+    </div>
+  );
+}
+/* ================= Inspector ================= */
+function Inspector({ kind, row, events, subEvents, parties, places, resolved, warnings, editable, onUpdate, onDuplicate, onDelete, onClose, onAddSubEvent, onSelect, onUpdatePlace, onUpdateParty }) {
+  if (!row) return null;
+  const r = resolved[row.id] || {};
+
+  if (kind === "event") {
+    const event = row;
+    const locPlace = event.location ? places.find(p => p.id === event.location) : null;
+    const kids = subEvents.filter(m => m.event === event.id).slice().sort((a, b) => { const ra = resolved[a.id] || {}, rb = resolved[b.id] || {}; return (ra.start == null ? 1e9 : ra.start) - (rb.start == null ? 1e9 : rb.start); });
+    const toggleParty = pid => { const has = (event.parties || []).includes(pid); onUpdate({ parties: has ? event.parties.filter(p => p !== pid) : [...(event.parties || []), pid] }); };
+    return (
+      <aside className="inspector" role="complementary" aria-label="Event details">
+        <div className="insp-head">
+          <h3>{editable ? "Event details" : "Event details (view only)"}</h3>
+          <button className="icon-btn" title="Close" onClick={onClose}>{"✕"}</button>
+        </div>
+        <div className="insp-body">
+          <fieldset className="insp-scope" disabled={!editable}>
+          <p className="ct-hint">An event is one group, at one place, for a stretch of time. It is the line on the map.</p>
+          <label className="fld"><span>Label</span>
+            <input className="cell-input bx" value={event.label} placeholder={eventName({ ...event, label: "" }, places)} onChange={e => onUpdate({ label: e.target.value })} />
+          </label>
+          <div className="fld2">
+            <label className="fld"><span>Type</span>
+              <select className="cell-select bx" value={event.type} onChange={e => onUpdate({ type: e.target.value })}>
+                <option value="event">event</option><option value="travel">travel</option>
+              </select>
+            </label>
+            <label className="fld"><span>Status</span>
+              <select className={"cell-select bx status-sel st-" + event.status} value={event.status} onChange={e => onUpdate({ status: e.target.value })}>
+                <option value="confirmed">confirmed</option><option value="provisional">provisional</option><option value="unbooked">unbooked</option>
+              </select>
+            </label>
+          </div>
+          <div className="fld"><span>Who is here</span>
+            <div className="parties-cell insp-parties">
+              {parties.map(p => { const on = (event.parties || []).includes(p.id); return (
+                <span key={p.id} className={"pchip" + (on ? " on" : "")} style={on ? { background: p.color } : {}} onClick={() => editable && toggleParty(p.id)} title={p.name}>
+                  <span className="dot" style={{ background: on ? "#fff" : p.color }}></span>{p.name}
+                </span>); })}
+            </div>
+          </div>
+          <div className="fld"><span>{event.type === "travel" ? "Arrives at" : "Place"}</span>
+            <select className="cell-select bx" value={event.location || ""} onChange={e => onUpdate({ location: e.target.value || null })}>
+              <option value="">(none)</option>
+              {places.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+            </select>
+          </div>
+          <div className="fld"><span>Starts after</span>
+            <div className="after-row">
+              <select className="cell-select bx" value={event.follows || ""} onChange={e => onUpdate({ follows: e.target.value || null })}>
+                <option value="">nothing, use a set start time</option>
+                {events.filter(o => o.id !== event.id).map(o => <option key={o.id} value={o.id}>{eventName(o, places)}</option>)}
+              </select>
+              {event.follows ? (
+                <span className="after-gap"><span className="plus">+</span>
+                  <input className="cell-input bx" type="number" style={{ width: "62px" }} value={event.gap == null ? "" : event.gap} placeholder="0"
+                    onChange={e => { const v = e.target.value; onUpdate({ gap: v === "" ? null : parseInt(v, 10) || 0 }); }} />
+                  <span className="mins">min after it ends</span></span>
+              ) : null}
+            </div>
+          </div>
+          <div className="fld2">
+            <label className="fld"><span>Start</span>
+              <input className="cell-input bx time" key={event.id + "_" + (event.start == null ? "n" : event.start)} defaultValue={fmtTime(event.start)} placeholder={event.follows ? "auto" : "9:00 am"}
+                onBlur={e => { const v = parseTime(e.target.value); if (v === undefined) { e.target.value = fmtTime(event.start); return; } onUpdate({ start: v }); }}
+                onKeyDown={e => { if (e.key === "Enter") e.target.blur(); }} />
+            </label>
+            <label className="fld"><span>Duration (min)</span>
+              <input className="cell-input bx dur" type="number" min="0" value={event.duration == null ? "" : event.duration}
+                onChange={e => { const v = e.target.value; onUpdate({ duration: v === "" ? 0 : Math.max(0, parseInt(v, 10) || 0) }); }} />
+            </label>
+          </div>
+          <div className="fld"><span>End</span><div className="insp-end">{r.end == null ? "not set" : fmtTime(r.end)} <em>computed</em></div></div>
+          <label className="fld"><span>Notes</span>
+            <textarea className="cell-input bx insp-notes" value={event.notes} onChange={e => onUpdate({ notes: e.target.value })} />
+          </label>
+          <div className="fld2">
+            <label className="fld"><span>Owner</span>
+              <input className="cell-input bx" value={event.owner || ""} placeholder="who runs this" onChange={e => onUpdate({ owner: e.target.value })} />
+            </label>
+            <label className="fld"><span>Buffer (min)</span>
+              <input className="cell-input bx" type="number" min="0" value={event.buffer == null ? "" : event.buffer} placeholder="padding" onChange={e => { const v = e.target.value; onUpdate({ buffer: v === "" ? null : Math.max(0, parseInt(v, 10) || 0) }); }} />
+            </label>
+          </div>
+          <VendorBlock row={event} onUpdate={onUpdate} />
+          <CallTimes row={event} parties={parties} onUpdate={onUpdate} />
+          {locPlace ? (
+            <div className="fld"><span>Place details</span>
+              <div className="loc-details">
+                <div className="loc-name">{locPlace.name}</div>
+                <input className="cell-input bx" placeholder="address" value={locPlace.address || ""} onChange={e => onUpdatePlace(locPlace.id, { address: e.target.value })} />
+                <input className="cell-input bx" placeholder="site contact" value={locPlace.contact || ""} onChange={e => onUpdatePlace(locPlace.id, { contact: e.target.value })} />
+              </div>
+            </div>
+          ) : null}
+          <details className="party-defaults">
+            <summary>Party default call times</summary>
+            <div className="pd-list">
+              {parties.map(p => (
+                <div className="ct-row" key={p.id}>
+                  <span className="ct-name"><span className="ct-dot" style={{ background: p.color }}></span>{p.name}</span>
+                  <input className="cell-input bx time" style={{ width: "96px" }} key={p.id + "_" + (p.callTime == null ? "n" : p.callTime)} defaultValue={p.callTime == null ? "" : fmtTime(p.callTime)} placeholder="default"
+                    onBlur={e => { const v = parseTime(e.target.value); if (v === undefined) { e.target.value = p.callTime == null ? "" : fmtTime(p.callTime); return; } onUpdateParty(p.id, { callTime: v }); }}
+                    onKeyDown={e => { if (e.key === "Enter") e.target.blur(); }} />
+                </div>
+              ))}
+            </div>
+          </details>
+          </fieldset>
+
+          {warnings && warnings.length > 0 ? (
+            <div className="insp-warn"><h4>Warnings</h4><ul>{warnings.map((w, i) => <li key={i}>{w}</li>)}</ul></div>
+          ) : (<div className="insp-ok">{"✓"} No warnings for this event.</div>)}
+
+          <div className="insp-subs">
+            <div className="insp-subs-head">
+              <span>Sub events on this line {kids.length ? "(" + kids.length + ")" : ""}</span>
+              {editable ? <button className="btn subtle sm" onClick={() => onAddSubEvent(event.id, null)}>Add sub event</button> : null}
+            </div>
+            {kids.length ? (
+              <ul className="sub-list">
+                {kids.map(c => { const cr = resolved[c.id] || {}; return (
+                  <li key={c.id}>
+                    <button className="sub-item" onClick={() => onSelect(c.id)}>
+                      <span className={"sub-kind " + (c.pinned ? "phase" : "moment")}>{c.pinned ? "pinned" : "floats"}</span>
+                      <span className="sub-name">{c.name || "unnamed"}</span>
+                      <span className="sub-time">{cr.start != null ? fmtTime(cr.start) : ""}{c.duration > 0 && cr.end != null ? " to " + fmtTime(cr.end) : ""}</span>
+                    </button>
+                  </li>); })}
+              </ul>
+            ) : (<p className="sub-empty">{editable ? "Nothing scheduled inside this event yet. Add sub events as you learn them, or click this line on the map at the time it happens." : "Nothing scheduled inside this event."}</p>)}
+          </div>
+
+          {editable ? (
+            <div className="insp-actions">
+              <button className="btn" onClick={onDuplicate}>Duplicate</button>
+              <button className="btn danger-btn" onClick={onDelete}>Delete</button>
+            </div>
+          ) : null}
+        </div>
+      </aside>
+    );
+  }
+
+  // sub event
+  const mo = row;
+  const host = events.find(s => s.id === mo.event) || null;
+  const hostRes = host ? (resolved[host.id] || {}) : {};
+  const toggleParty = pid => { const has = (mo.parties || []).includes(pid); onUpdate({ parties: has ? mo.parties.filter(p => p !== pid) : [...(mo.parties || []), pid] }); };
+  const setStartFromInput = v => { if (mo.pinned) onUpdate({ start: v }); else if (hostRes.start != null && v != null) onUpdate({ offset: v - hostRes.start }); };
+  return (
+    <aside className="inspector" role="complementary" aria-label="Sub event details">
+      <div className="insp-head">
+        <h3>{editable ? "Sub event details" : "Sub event details (view only)"}</h3>
+        <button className="icon-btn" title="Close" onClick={onClose}>{"✕"}</button>
+      </div>
+      <div className="insp-body">
+        <div className="insp-parent">
+          <span>On the line</span>
+          {host ? <button className="link-btn" onClick={() => onSelect(host.id)}>{eventName(host, places)}</button> : <em>no event</em>}
+        </div>
+        <fieldset className="insp-scope" disabled={!editable}>
+        <label className="fld"><span>What happens</span>
+          <input className="cell-input bx" value={mo.name} placeholder="bride hair done, dinner served" onChange={e => onUpdate({ name: e.target.value })} />
+        </label>
+        <div className="fld"><span>On event</span>
+          <select className="cell-select bx" value={mo.event || ""} onChange={e => onUpdate({ event: e.target.value || null })}>
+            <option value="">(none)</option>
+            {events.map(s => <option key={s.id} value={s.id}>{eventName(s, places) + " " + fmtTime((resolved[s.id] || {}).start)}</option>)}
+          </select>
+        </div>
+        <div className="fld"><span>Who</span>
+          <div className="parties-cell insp-parties">
+            {(host ? parties.filter(p => (host.parties || []).includes(p.id)) : parties).map(p => { const on = (mo.parties || []).includes(p.id); return (
+              <span key={p.id} className={"pchip" + (on ? " on" : "")} style={on ? { background: p.color } : {}} onClick={() => editable && toggleParty(p.id)} title={p.name}>
+                <span className="dot" style={{ background: on ? "#fff" : p.color }}></span>{p.name}
+              </span>); })}
+          </div>
+        </div>
+        <div className="fld"><span>Time behaviour</span>
+          <div className="after-row">
+            <select className="cell-select bx" value={mo.pinned ? "pinned" : "float"}
+              onChange={e => { const pin = e.target.value === "pinned";
+                if (pin) onUpdate({ pinned: true, start: r.start != null ? r.start : (hostRes.start != null ? hostRes.start + (mo.offset || 0) : null) });
+                else onUpdate({ pinned: false, offset: (r.start != null && hostRes.start != null) ? r.start - hostRes.start : 0, start: null }); }}>
+              <option value="float">floats, rides along when the event moves</option>
+              <option value="pinned">pinned, holds this clock time</option>
+            </select>
+          </div>
+          <p className="ct-hint">{mo.pinned ? "Dinner at 7:00 no matter what." : "Keeps its gap from the start of the event, currently " + (mo.offset || 0) + " min in."}</p>
+        </div>
+        <div className="fld2">
+          <label className="fld"><span>Start</span>
+            <input className="cell-input bx time" key={mo.id + "_" + (r.start == null ? "n" : r.start)} defaultValue={fmtTime(r.start)} placeholder="9:00 am"
+              onBlur={e => { const v = parseTime(e.target.value); if (v === undefined || v === null) { e.target.value = fmtTime(r.start); return; } setStartFromInput(v); }}
+              onKeyDown={e => { if (e.key === "Enter") e.target.blur(); }} />
+          </label>
+          <label className="fld"><span>Duration (min)</span>
+            <input className="cell-input bx dur" type="number" min="0" value={mo.duration == null ? "" : mo.duration}
+              onChange={e => { const v = e.target.value; onUpdate({ duration: v === "" ? 0 : Math.max(0, parseInt(v, 10) || 0) }); }} />
+          </label>
+        </div>
+        <div className="fld"><span>End</span><div className="insp-end">{mo.duration > 0 ? (r.end == null ? "not set" : fmtTime(r.end)) : "a point in time"} <em>computed</em></div></div>
+        <label className="fld"><span>Status</span>
+          <select className={"cell-select bx status-sel st-" + mo.status} value={mo.status} onChange={e => onUpdate({ status: e.target.value })}>
+            <option value="confirmed">confirmed</option><option value="provisional">provisional</option><option value="unbooked">unbooked</option>
+          </select>
+        </label>
+        <label className="fld"><span>Notes</span>
+          <textarea className="cell-input bx insp-notes" value={mo.notes} onChange={e => onUpdate({ notes: e.target.value })} />
+        </label>
+        <label className="fld"><span>Owner</span>
+          <input className="cell-input bx" value={mo.owner || ""} placeholder="who runs this" onChange={e => onUpdate({ owner: e.target.value })} />
+        </label>
+        <VendorBlock row={mo} onUpdate={onUpdate} />
+        <CallTimes row={mo} parties={parties} onUpdate={onUpdate} />
+        </fieldset>
+
+        {warnings && warnings.length > 0 ? (
+          <div className="insp-warn"><h4>Warnings</h4><ul>{warnings.map((w, i) => <li key={i}>{w}</li>)}</ul></div>
+        ) : (<div className="insp-ok">{"✓"} No warnings for this sub event.</div>)}
+
+        {editable ? (
+          <div className="insp-actions">
+            <button className="btn" onClick={onDuplicate}>Duplicate</button>
+            <button className="btn danger-btn" onClick={onDelete}>Delete</button>
+          </div>
+        ) : null}
+      </div>
+    </aside>
+  );
+}
+/* ================= App ================= */
+function App() {
+  /* ----- auth + cloud state ----- */
+  const [user, setUser] = useState(null);
+  const [authReady, setAuthReady] = useState(LOCAL_MODE);
+  const [loading, setLoading] = useState(!LOCAL_MODE);
+  const [docExists, setDocExists] = useState(LOCAL_MODE ? true : null);
+  const [saveStatus, setSaveStatus] = useState("idle");
+  const isEditor = LOCAL_MODE ? true : emailAllowed(user && user.email);
+  const editable = isEditor;
+
+  const seeded = useMemo(() => normalizeState(seedState()), []);
+  const [events, setEvents] = useState(LOCAL_MODE ? seeded.events : []);
+  const [subEvents, setSubEvents] = useState(LOCAL_MODE ? seeded.subEvents : []);
+  const [parties, setParties] = useState(LOCAL_MODE ? seeded.parties : []);
+  const [places, setPlaces] = useState(LOCAL_MODE ? seeded.places : []);
+  const [selId, setSelId] = useState(null);
+  const [showManager, setShowManager] = useState(false);
+  const [view, setView] = useState("table");
+  const [collapseTrunk, setCollapseTrunk] = useState(false);
+  const [showLabels, setShowLabels] = useState(true);
+  const [filter, setFilter] = useState("all");
+  const [confirm, setConfirm] = useState(null);
+  const [histTick, setHistTick] = useState(0);
+
+  const applyingRemote = useRef(false);
+  const lastWriteJson = useRef(null);
+  const seededOnce = useRef(false);
+
+  const resolved = useMemo(() => resolveAll(events, subEvents), [events, subEvents]);
+
+  const warningsById = useMemo(() => {
+    const map = {};
+    events.forEach(s => { map[s.id] = validateEvent(s, events, places, resolved); });
+    subEvents.forEach(m => { map[m.id] = validateSubEvent(m, events, parties, resolved, places); });
+    return map;
+  }, [events, subEvents, places, parties, resolved]);
+
+  const allWarnings = useMemo(() => {
+    const out = [];
+    events.forEach(s => (warningsById[s.id] || []).forEach(m => out.push({ name: eventName(s, places), msg: m })));
+    subEvents.forEach(mo => (warningsById[mo.id] || []).forEach(m => out.push({ name: mo.name || "(unnamed moment)", msg: m })));
+    return out;
+  }, [events, subEvents, warningsById, places]);
+
+  /* ----- firebase: sign in state ----- */
+  function signIn() { auth.signInWithPopup(new firebase.auth.GoogleAuthProvider()).catch(e => window.alert("Sign in failed: " + ((e && e.message) || e))); }
+  function signOut() { auth.signOut(); }
+  useEffect(() => { if (LOCAL_MODE) return; const un = auth.onAuthStateChanged(u => { setUser(u); setAuthReady(true); }); return un; }, []);
+
+  function applyRemote(n) {
+    applyingHistory.current = true; applyingRemote.current = true;
+    setEvents(n.events); setSubEvents(n.subEvents); setParties(n.parties); setPlaces(n.places);
+    setSelId(sid => (n.events.find(x => x.id === sid) || n.subEvents.find(x => x.id === sid)) ? sid : null);
+  }
+  function writeState(ev, se, pa, pl) {
+    if (LOCAL_MODE || !isEditor) return;
+    const json = JSON.stringify({ version: 4, events: ev, subEvents: se, parties: pa, places: pl });
+    lastWriteJson.current = json; setSaveStatus("saving");
+    db.collection("plans").doc(PLAN_ID).set({ json, updatedAt: firebase.firestore.FieldValue.serverTimestamp(), updatedBy: (user && user.email) || "" })
+      .then(() => setSaveStatus("saved")).catch(() => setSaveStatus("error"));
+  }
+
+  /* ----- firebase: live read ----- */
+  useEffect(() => {
+    if (LOCAL_MODE) return;
+    const ref = db.collection("plans").doc(PLAN_ID);
+    const un = ref.onSnapshot(snap => {
+      if (snap.exists) {
+        setDocExists(true);
+        const data = snap.data() || {};
+        const json = data.json || "";
+        if (json && json !== lastWriteJson.current) {
+          try { applyRemote(normalizeState(JSON.parse(json))); lastWriteJson.current = json; } catch (e) {}
+        }
+      } else { setDocExists(false); }
+      setLoading(false);
+    }, err => { setLoading(false); setSaveStatus("error"); });
+    return un;
+  }, []);
+
+  /* ----- firebase: first editor seeds an empty plan ----- */
+  useEffect(() => {
+    if (LOCAL_MODE || loading || docExists !== false || !isEditor || seededOnce.current) return;
+    seededOnce.current = true;
+    const s = normalizeState(seedState());
+    applyRemote(s); writeState(s.events, s.subEvents, s.parties, s.places);
+  }, [docExists, isEditor, loading]);
+
+  /* ----- firebase: auto save on edits (editors only) ----- */
+  useEffect(() => {
+    if (LOCAL_MODE || !isEditor || loading) return;
+    if (applyingRemote.current) { applyingRemote.current = false; return; }
+    const json = JSON.stringify({ version: 4, events, subEvents, parties, places });
+    if (json === lastWriteJson.current) return;
+    setSaveStatus("saving");
+    const t = setTimeout(() => writeState(events, subEvents, parties, places), 800);
+    return () => clearTimeout(t);
+  }, [events, subEvents, parties, places, isEditor, loading]);
+
+  useEffect(() => {
+    if (LOCAL_MODE) return;
+    const h = e => { if (saveStatus === "saving") { e.preventDefault(); e.returnValue = ""; } };
+    window.addEventListener("beforeunload", h); return () => window.removeEventListener("beforeunload", h);
+  }, [saveStatus]);
+
+  /* ----- undo / redo ----- */
+  const history = useRef({ past: [], future: [] });
+  const applyingHistory = useRef(false);
+  const prevSnap = useRef(null);
+  useEffect(() => {
+    const snap = { events, subEvents, parties, places };
+    if (prevSnap.current === null) { prevSnap.current = snap; return; }
+    if (applyingHistory.current) { applyingHistory.current = false; prevSnap.current = snap; return; }
+    history.current.past.push(prevSnap.current);
+    if (history.current.past.length > 200) history.current.past.shift();
+    history.current.future = []; prevSnap.current = snap; setHistTick(t => t + 1);
+  }, [events, subEvents, parties, places]);
+  function restore(s) {
+    applyingHistory.current = true;
+    setEvents(s.events); setSubEvents(s.subEvents); setParties(s.parties); setPlaces(s.places);
+    setSelId(sid => (s.events.find(x => x.id === sid) || s.subEvents.find(x => x.id === sid)) ? sid : null);
+    setHistTick(t => t + 1);
+  }
+  function undo() { if (!editable || !history.current.past.length) return; const prev = history.current.past.pop(); history.current.future.push({ events, subEvents, parties, places }); restore(prev); }
+  function redo() { if (!editable || !history.current.future.length) return; const next = history.current.future.pop(); history.current.past.push({ events, subEvents, parties, places }); restore(next); }
+  const canUndo = history.current.past.length > 0;
+  const canRedo = history.current.future.length > 0;
+  useEffect(() => {
+    function onKey(e) {
+      const meta = e.metaKey || e.ctrlKey; if (!meta || e.key.toLowerCase() !== "z") return;
+      const t = e.target; const tag = (t && t.tagName || "").toLowerCase();
+      if (tag === "input" || tag === "textarea" || tag === "select" || (t && t.isContentEditable)) return;
+      e.preventDefault(); if (e.shiftKey) redo(); else undo();
+    }
+    window.addEventListener("keydown", onKey); return () => window.removeEventListener("keydown", onKey);
+  });
+
+  /* ----- edits (all guarded so viewers cannot change anything) ----- */
+  function updateEvent(id, patch) { if (!editable) return; setEvents(prev => prev.map(s => (s.id === id ? { ...s, ...patch } : s))); }
+  function updateSubEvent(id, patch) { if (!editable) return; setSubEvents(prev => prev.map(m => (m.id === id ? { ...m, ...patch } : m))); }
+  function addEvent(patch) {
+    if (!editable) return;
+    const s = normEvent({ id: newId("ev"), type: "event", label: "", parties: [], location: places[0] ? places[0].id : null, follows: null, start: null, duration: 30, status: "provisional", ...patch });
+    setEvents(prev => [...prev, s]); setSelId(s.id);
+  }
+  function addSubEvent(eventId, mins) {
+    if (!editable) return;
+    const host = events.find(s => s.id === eventId); if (!host) return;
+    const hr = resolved[eventId] || {}; const at = mins != null ? mins : (hr.start != null ? hr.start : null);
+    const m = normSubEvent({ id: newId("sub"), name: "", event: eventId, parties: [...(host.parties || [])], pinned: false, offset: (at != null && hr.start != null) ? at - hr.start : 0, duration: 0, status: "provisional" });
+    setSubEvents(prev => [...prev, m]); setSelId(m.id);
+  }
+  function duplicateEvent(id) {
+    if (!editable) return;
+    const src = events.find(s => s.id === id); if (!src) return;
+    const copy = { ...src, id: newId("ev"), parties: [...(src.parties || [])], label: (src.label || eventName(src, places)) + " (copy)", follows: null };
+    const idx = events.findIndex(s => s.id === id);
+    setEvents(prev => { const next = [...prev]; next.splice(idx + 1, 0, copy); return next; }); setSelId(copy.id);
+  }
+  function duplicateSubEvent(id) {
+    if (!editable) return;
+    const src = subEvents.find(m => m.id === id); if (!src) return;
+    const copy = { ...src, id: newId("sub"), parties: [...(src.parties || [])], name: (src.name || "moment") + " (copy)" };
+    setSubEvents(prev => [...prev, copy]); setSelId(copy.id);
+  }
+  function deleteEvent(id) {
+    setEvents(prev => prev.filter(s => s.id !== id).map(s => (s.follows === id ? { ...s, follows: null } : s)));
+    setSubEvents(prev => prev.filter(m => m.event !== id));
+    if (selId === id) setSelId(null);
+  }
+  function deleteSubEvent(id) { if (!editable) return; setSubEvents(prev => prev.filter(m => m.id !== id)); if (selId === id) setSelId(null); }
+
+  function requestDeleteEvent(id) {
+    if (!editable) return;
+    const s = events.find(x => x.id === id); if (!s) return;
+    const kids = subEvents.filter(m => m.event === id);
+    const followers = events.filter(x => x.follows === id);
+    const lines = [];
+    if (kids.length) lines.push(kids.length + (kids.length > 1 ? " sub events on this line will also be deleted: " : " sub event on this line will also be deleted: ") + kids.map(m => m.name || "unnamed").join(", ") + ".");
+    if (followers.length) lines.push(followers.length + (followers.length > 1 ? " events that start after it will lose that link: " : " event that starts after it will lose that link: ") + followers.map(x => eventName(x, places)).join(", ") + ".");
+    if (lines.length) setConfirm({ title: "Delete " + eventName(s, places) + "?", lines, confirmLabel: "Delete", onConfirm: () => { deleteEvent(id); setConfirm(null); } });
+    else deleteEvent(id);
+  }
+  function requestRemoveParty(id) {
+    if (!editable) return;
+    const p = parties.find(x => x.id === id); if (!p) return;
+    const aEvents = events.filter(s => (s.parties || []).includes(id) || (s.callTimes && s.callTimes[id] != null));
+    const aSubEvents = subEvents.filter(m => (m.parties || []).includes(id) || (m.callTimes && m.callTimes[id] != null));
+    const n = aEvents.length + aSubEvents.length;
+    if (n) {
+      setConfirm({ title: "Remove party " + p.name + "?", lines: ["It will be taken off " + n + (n > 1 ? " rows" : " row") + " and any call times set for it there will be cleared: " + [...aEvents.map(s => eventName(s, places)), ...aSubEvents.map(m => m.name || "unnamed sub event")].join(", ") + "."], confirmLabel: "Remove", onConfirm: () => { removeParty(id); setConfirm(null); } });
+    } else removeParty(id);
+  }
+  function requestRemovePlace(id) {
+    if (!editable) return;
+    const p = places.find(x => x.id === id); if (!p) return;
+    const usedBy = events.filter(s => s.location === id);
+    if (usedBy.length) {
+      setConfirm({ title: "Remove place " + p.name + "?", lines: [usedBy.length + (usedBy.length > 1 ? " events" : " event") + " set here will lose their place, and the sub events on them lose it too: " + usedBy.map(s => eventName(s, places)).join(", ") + ".", "Its drive times to and from other places will also be removed."], confirmLabel: "Remove", onConfirm: () => { removePlace(id); setConfirm(null); } });
+    } else removePlace(id);
+  }
+  function clearTimeline() {
+    if (!editable) return;
+    setConfirm({ title: "Clear the whole timeline?", lines: ["Every event and sub event will be removed. Your parties and places stay. You can undo this right after with undo."], confirmLabel: "Clear", onConfirm: () => { setEvents([]); setSubEvents([]); setSelId(null); setConfirm(null); } });
+  }
+  function toggleEventParty(eventId, partyId) {
+    if (!editable) return;
+    const s = events.find(x => x.id === eventId); const has = (s.parties || []).includes(partyId);
+    updateEvent(eventId, { parties: has ? s.parties.filter(p => p !== partyId) : [...(s.parties || []), partyId] });
+    if (has) setSubEvents(prev => prev.map(m => (m.event === eventId ? { ...m, parties: (m.parties || []).filter(p => p !== partyId) } : m)));
+  }
+  function toggleSubEventParty(momentId, partyId) {
+    if (!editable) return;
+    const m = subEvents.find(x => x.id === momentId); const has = (m.parties || []).includes(partyId);
+    updateSubEvent(momentId, { parties: has ? m.parties.filter(p => p !== partyId) : [...(m.parties || []), partyId] });
+  }
+
+  /* ----- parties ----- */
+  const PALETTE = ["#2f6fed","#12a594","#b5179e","#f59e0b","#6b7280","#d1495b","#3a0ca3","#2a9d8f"];
+  function addParty() { if (!editable) return; setParties(prev => [...prev, { id: newId("p"), name: "New party", color: PALETTE[prev.length % PALETTE.length], laneOrder: prev.length, callTime: null }]); }
+  function updateParty(id, patch) { if (!editable) return; setParties(prev => prev.map(p => (p.id === id ? { ...p, ...patch } : p))); }
+  function removeParty(id) {
+    setParties(prev => prev.filter(p => p.id !== id).sort((a, b) => a.laneOrder - b.laneOrder).map((p, i) => ({ ...p, laneOrder: i })));
+    const strip = row => { const ct = { ...(row.callTimes || {}) }; if (ct[id] != null) delete ct[id]; return { ...row, parties: (row.parties || []).filter(pid => pid !== id), callTimes: ct }; };
+    setEvents(prev => prev.map(strip)); setSubEvents(prev => prev.map(strip));
+  }
+  function moveParty(id, dir) {
+    if (!editable) return;
+    setParties(prev => { const sorted = [...prev].sort((a, b) => a.laneOrder - b.laneOrder); const i = sorted.findIndex(p => p.id === id); const j = i + dir; if (i < 0 || j < 0 || j >= sorted.length) return prev; const tmp = sorted[i]; sorted[i] = sorted[j]; sorted[j] = tmp; return sorted.map((p, k) => ({ ...p, laneOrder: k })); });
+  }
+
+  /* ----- places ----- */
+  function addPlace() { if (!editable) return; setPlaces(prev => [...prev, { id: newId("pl"), name: "New place", drives: {}, address: "", contact: "" }]); }
+  function updatePlace(id, patch) { if (!editable) return; setPlaces(prev => prev.map(p => (p.id === id ? { ...p, ...patch } : p))); }
+  function movePlace(id, dir) { if (!editable) return; setPlaces(prev => { const i = prev.findIndex(p => p.id === id); const j = i + dir; if (i < 0 || j < 0 || j >= prev.length) return prev; const next = [...prev]; const tmp = next[i]; next[i] = next[j]; next[j] = tmp; return next; }); }
+  function movePlaceTo(id, index) { if (!editable) return; setPlaces(prev => { const from = prev.findIndex(p => p.id === id); if (from < 0 || index < 0 || index >= prev.length || index === from) return prev; const next = [...prev]; const [it] = next.splice(from, 1); next.splice(index, 0, it); return next; }); }
+  function removePlace(id) {
+    setPlaces(prev => prev.filter(p => p.id !== id).map(p => { const drives = { ...(p.drives || {}) }; delete drives[id]; return { ...p, drives }; }));
+    setEvents(prev => prev.map(s => (s.location === id ? { ...s, location: null } : s)));
+  }
+  function setDrive(fromId, toId, val) {
+    if (!editable) return;
+    setPlaces(prev => prev.map(p => { if (p.id !== fromId) return p; const drives = { ...(p.drives || {}) }; if (val === "" || val === null || val === undefined) delete drives[toId]; else drives[toId] = Math.max(0, parseInt(val, 10) || 0); return { ...p, drives }; }));
+  }
+
+  /* ----- backups (download only, cloud is the real save) ----- */
+  function downloadFile(name, text, type) {
+    const blob = new Blob([text], { type }); const url = URL.createObjectURL(blob);
+    const a = document.createElement("a"); a.href = url; a.download = name; document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }
+  function downloadBackup() { downloadFile("wedding-day-lines-backup.json", JSON.stringify({ version: 4, events, subEvents, parties, places }, null, 2), "application/json"); }
+  function downloadCsv() { downloadFile("wedding-day-lines.csv", buildCsv(events, subEvents, parties, places, resolved), "text/csv"); }
+
+  const selEvent = events.find(s => s.id === selId) || null;
+  const selSubEvent = selEvent ? null : (subEvents.find(m => m.id === selId) || null);
+  const selKind = selEvent ? "event" : (selSubEvent ? "subEvent" : null);
+  const placeLabel = id => { const p = places.find(x => x.id === id); return p ? p.name : ""; };
+
+  /* ----- overview ----- */
+  const rows = [...events, ...subEvents];
+  const statPlaced = rows.filter(s => { const r = resolved[s.id]; return r && r.start != null && r.end != null; });
+  let firstRow = null, lastRow = null;
+  statPlaced.forEach(s => { const r = resolved[s.id]; if (!firstRow || r.start < resolved[firstRow.id].start) firstRow = s; if (!lastRow || r.end > resolved[lastRow.id].end) lastRow = s; });
+  const rowName = s => (s ? (s.event !== undefined ? (s.name || "unnamed sub event") : eventName(s, places)) : "");
+  const spanMin = (firstRow && lastRow) ? (resolved[lastRow.id].end - resolved[firstRow.id].start) : 0;
+  const spanFmt = Math.floor(spanMin / 60) + "h " + (spanMin % 60) + "m";
+  const statusCounts = { confirmed: 0, provisional: 0, unbooked: 0 };
+  rows.forEach(s => { if (statusCounts[s.status] != null) statusCounts[s.status]++; });
+  const statusTotal = rows.length || 1;
+  const pct = n => (n / statusTotal * 100);
+  const rowMatches = s => filter === "all" || s.status !== "confirmed";
+
+  const startOf = s => { const r = resolved[s.id]; return (r && r.start != null) ? r.start : 1e9; };
+  const byStart = (a, b) => startOf(a) - startOf(b);
+  const sectionDefs = [
+    { key: "morning", label: "Morning", test: m => m < 720 },
+    { key: "afternoon", label: "Afternoon", test: m => m >= 720 && m < 1020 },
+    { key: "evening", label: "Evening", test: m => m >= 1020 },
+    { key: "unscheduled", label: "Unscheduled", test: null },
+  ];
+  const bucketOf = t => { const st = startOf(t); if (st >= 1e9) return "unscheduled"; const d = sectionDefs.find(sd => sd.test && sd.test(st)); return d ? d.key : "evening"; };
+  const orphanSubEvents = subEvents.filter(m => !events.find(s => s.id === m.event));
+  const sections = [];
+  sectionDefs.forEach(sd => {
+    const group = events.filter(t => bucketOf(t) === sd.key).sort(byStart);
+    const rowsOut = [];
+    group.forEach(t => { rowsOut.push({ kind: "event", row: t, depth: 0 }); subEvents.filter(m => m.event === t.id).sort(byStart).forEach(c => rowsOut.push({ kind: "subEvent", row: c, depth: 1, host: t })); });
+    if (sd.key === "unscheduled") orphanSubEvents.forEach(m => rowsOut.push({ kind: "subEvent", row: m, depth: 0, host: null }));
+    if (rowsOut.length) sections.push({ label: sd.label, rows: rowsOut });
+  });
+
+  /* ----- gate screens ----- */
+  if (!authReady) return <div className="loading-screen">Loading&#8230;</div>;
+  if (!LOCAL_MODE && loading) return <div className="loading-screen">Loading the timeline&#8230;</div>;
+
+  const saveText = saveStatus === "saving" ? "saving…" : saveStatus === "saved" ? "all changes saved" : saveStatus === "error" ? "save failed, check your connection" : "";
+
+  return (
+    <div className={"app" + (selKind ? " with-inspector" : "")}>
+      <header className="topbar">
+        <div className="brand">
+          <h1>Wedding Day Lines</h1>
+          <span className="tag">June 2027</span>
+        </div>
+        <div className="authbar">
+          {LOCAL_MODE ? <span className="who">local preview, not saved</span> : (
+            user ? (
+              <React.Fragment>
+                <span className={"mode-chip " + (isEditor ? "edit" : "view")}>{isEditor ? "Editing" : "Viewing"}</span>
+                {isEditor && saveText ? <span className={"save-status " + saveStatus}>{saveText}</span> : null}
+                <span className="who">{user.email}</span>
+                <button className="btn subtle" onClick={signOut}>Sign out</button>
+              </React.Fragment>
+            ) : (
+              <React.Fragment>
+                <span className="mode-chip view">Viewing</span>
+                <button className="btn" onClick={signIn}>Sign in to edit</button>
+              </React.Fragment>
+            )
+          )}
+        </div>
+      </header>
+
+      {FIREBASE_LOAD_FAILED ? <div className="banner">Firebase did not load, so nothing you change here is saved right now. This usually means the page could not reach gstatic.com, check your connection or an ad blocker, then reload the page.</div> : null}
+      {LOCAL_MODE && !FIREBASE_LOAD_FAILED ? <div className="banner">This is a local preview. Firebase is not set up yet, so nothing you change here is saved. Fill in the config block near the top of the file to turn on saving and sign in.</div> : null}
+      {!LOCAL_MODE && user && !isEditor ? <div className="banner">You are signed in as {user.email}, which can view but not edit this timeline. Sign in with an editor account to make changes.</div> : null}
+      {!LOCAL_MODE && !user && docExists === false ? <div className="banner">This timeline has not been published yet. The couple will add it soon.</div> : null}
+
+      <section className="overview">
+        <div className="ov-stats">
+          <div className="ov-stat"><span className="ov-k">First</span><span className="ov-v">{firstRow ? rowName(firstRow) + ", " + fmtTime(resolved[firstRow.id].start) : "nothing scheduled"}</span></div>
+          <div className="ov-stat"><span className="ov-k">Last</span><span className="ov-v">{lastRow ? rowName(lastRow) + ", " + fmtTime(resolved[lastRow.id].end) : "nothing scheduled"}</span></div>
+          <div className="ov-stat"><span className="ov-k">Span</span><span className="ov-v mono">{spanFmt}</span></div>
+          <div className="ov-stat"><span className="ov-k">Places</span><span className="ov-v mono">{places.length}</span></div>
+        </div>
+        <div className="ov-roll">
+          <div className="roll-bar" role="img" aria-label={"Statuses: " + statusCounts.confirmed + " confirmed, " + statusCounts.provisional + " provisional, " + statusCounts.unbooked + " unbooked"}>
+            {statusCounts.confirmed > 0 ? <span className="seg-confirmed" style={{ width: pct(statusCounts.confirmed) + "%" }}></span> : null}
+            {statusCounts.provisional > 0 ? <span className="seg-provisional" style={{ width: pct(statusCounts.provisional) + "%" }}></span> : null}
+            {statusCounts.unbooked > 0 ? <span className="seg-unbooked" style={{ width: pct(statusCounts.unbooked) + "%" }}></span> : null}
+          </div>
+          <div className="roll-key">
+            <span className="rk"><span className="rk-dot c"></span>{statusCounts.confirmed} confirmed</span>
+            <span className="rk"><span className="rk-dot p"></span>{statusCounts.provisional} provisional</span>
+            <span className="rk"><span className="rk-dot u"></span>{statusCounts.unbooked} unbooked</span>
+          </div>
+        </div>
+      </section>
+
+      <div className="viewbar">
+        <div className="seg">
+          <button className={"seg-btn" + (view === "table" ? " on" : "")} onClick={() => setView("table")}>Table</button>
+          <button className={"seg-btn" + (view === "map" ? " on" : "")} onClick={() => setView("map")}>Map</button>
+        </div>
+        <div className="seg">
+          <button className={"seg-btn" + (filter === "all" ? " on" : "")} onClick={() => setFilter("all")}>All</button>
+          <button className={"seg-btn" + (filter === "unconfirmed" ? " on" : "")} onClick={() => setFilter("unconfirmed")}>Still to confirm</button>
+        </div>
+        {view === "map" ? (
+          <React.Fragment>
+            <label className="chk"><input type="checkbox" checked={showLabels} onChange={e => setShowLabels(e.target.checked)} /> Show labels</label>
+            <label className="chk"><input type="checkbox" checked={collapseTrunk} onChange={e => setCollapseTrunk(e.target.checked)} /> Collapse where all together</label>
+          </React.Fragment>
+        ) : null}
+        <span className="spacer"></span>
+        {editable ? (
+          <React.Fragment>
+            <button className="btn subtle" onClick={undo} disabled={!canUndo} title="Undo (Ctrl or Cmd + Z)">Undo</button>
+            <button className="btn subtle" onClick={redo} disabled={!canRedo} title="Redo (Ctrl or Cmd + Shift + Z)">Redo</button>
+            <button className="btn subtle" onClick={downloadBackup} title="Download a JSON backup of the whole plan">Download backup</button>
+            <button className="btn subtle" onClick={downloadCsv} title="Download the rows as CSV for Excel">Export CSV</button>
+          </React.Fragment>
+        ) : null}
+      </div>
+
+      {view === "map" ? (
+        <MapView events={events} subEvents={subEvents} parties={parties} places={places} resolved={resolved} selId={selId} setSelId={setSelId}
+          collapse={collapseTrunk} showLabels={showLabels} onMovePlaceTo={movePlaceTo} onAddEvent={addEvent} onAddSubEvent={addSubEvent} filter={filter} editable={editable} />
+      ) : (
+      <fieldset className="edit-scope" disabled={!editable}>
+      {editable ? (
+        <div className="toolbar">
+          <button className="btn primary" onClick={() => addEvent({})}>Add event</button>
+          <button className="btn" onClick={() => { const t = [...events].sort(byStart)[0]; if (t) addSubEvent(t.id, null); }} disabled={!events.length}>Add sub event</button>
+          <button className="btn" onClick={() => setShowManager(v => !v)}>{showManager ? "Hide lists" : "Manage parties and places"}</button>
+          <span className="spacer"></span>
+          <button className="btn subtle" onClick={clearTimeline} title="Remove all events and sub events to start a real plan">Clear timeline</button>
+        </div>
+      ) : null}
+
+      {editable && showManager ? (
+        <div className="manager">
+          <div className="mgr-card">
+            <div className="mgr-head"><h3>Parties</h3><button className="btn" onClick={addParty}>Add party</button></div>
+            <div className="party-list">
+              {parties.slice().sort((a, b) => a.laneOrder - b.laneOrder).map((p, idx, arr) => (
+                <div className="party-row" key={p.id}>
+                  <input type="color" className="color-input" value={p.color} title="Line color" onChange={e => updateParty(p.id, { color: e.target.value })} />
+                  <input className="cell-input mgr-name" value={p.name} onChange={e => updateParty(p.id, { name: e.target.value })} />
+                  <span className="lane-label">track {p.laneOrder + 1}</span>
+                  <button className="icon-btn" title="Move earlier track" disabled={idx === 0} onClick={() => moveParty(p.id, -1)}>{"↑"}</button>
+                  <button className="icon-btn" title="Move later track" disabled={idx === arr.length - 1} onClick={() => moveParty(p.id, 1)}>{"↓"}</button>
+                  <button className="icon-btn danger" title="Remove party" onClick={() => requestRemoveParty(p.id)}>{"✕"}</button>
+                </div>
+              ))}
+              {parties.length === 0 ? <p className="mgr-note">No parties yet. Add one to put it on an event.</p> : null}
+            </div>
+            <p className="mgr-note">Track order sets where each party's line sits when several parties share a place in the map. Removing a party takes it off every event and sub event it was on.</p>
+          </div>
+          <div className="mgr-card">
+            <div className="mgr-head"><h3>Places</h3><button className="btn" onClick={addPlace}>Add place</button></div>
+            <div className="place-list">
+              {places.map((p, idx) => (
+                <div className="place-row" key={p.id}>
+                  <span className="lane-label">col {idx + 1}</span>
+                  <input className="cell-input mgr-name" value={p.name} onChange={e => updatePlace(p.id, { name: e.target.value })} />
+                  <button className="icon-btn" title="Move column left" disabled={idx === 0} onClick={() => movePlace(p.id, -1)}>{"↑"}</button>
+                  <button className="icon-btn" title="Move column right" disabled={idx === places.length - 1} onClick={() => movePlace(p.id, 1)}>{"↓"}</button>
+                  <button className="icon-btn danger" title="Remove place" onClick={() => requestRemovePlace(p.id)}>{"✕"}</button>
+                </div>
+              ))}
+              {places.length === 0 ? <p className="mgr-note">No places yet. Add one to set it as an event's place.</p> : null}
+            </div>
+            {places.length > 0 ? (
+              <React.Fragment>
+                <h4 className="matrix-title">Drive times in minutes</h4>
+                <div className="matrix-wrap">
+                  <table className="matrix">
+                    <thead><tr><th className="corner">from \ to</th>{places.map(p => <th key={p.id}>{p.name}</th>)}</tr></thead>
+                    <tbody>
+                      {places.map(from => (
+                        <tr key={from.id}>
+                          <th>{from.name}</th>
+                          {places.map(to => (
+                            <td key={to.id}>
+                              {from.id === to.id ? <span className="diag">{"·"}</span> : (
+                                <input className="cell-input mtx" type="number" min="0" value={from.drives && from.drives[to.id] != null ? from.drives[to.id] : ""} onChange={e => setDrive(from.id, to.id, e.target.value)} />
+                              )}
+                            </td>
+                          ))}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </React.Fragment>
+            ) : null}
+            <p className="mgr-note">Places are the columns in the map, left to right in this order, so use the arrows to reorder them. Each drive cell is the time from the row place to the column place, and the travel warning uses these. Removing a place clears it from any event that used it.</p>
+          </div>
+        </div>
+      ) : null}
+
+      <div className="table-wrap">
+        <table className="grid">
+          <thead>
+            <tr>
+              <th>Row</th><th className="col-name">Name</th><th>Parties</th><th>Place</th><th>Time rule</th><th>Start</th><th>Duration</th><th>End</th><th>Status</th><th>Owner</th><th>Vendor</th><th>Notes</th><th className="col-warn" title="Warnings">!</th><th></th>
+            </tr>
+          </thead>
+          <tbody>
+            {sections.map(section => {
+              const visRows = section.rows.filter(({ row }) => rowMatches(row));
+              if (!visRows.length) return null;
+              return (
+                <React.Fragment key={"sec-" + section.label}>
+                  <tr className="section-row"><td colSpan={14}>{section.label}</td></tr>
+                  {visRows.map(item => {
+                    const s = item.row; const r = resolved[s.id] || {}; const w = warningsById[s.id] || [];
+                    const isMoment = item.kind === "subEvent"; const host = item.host || null; const hostRes = host ? (resolved[host.id] || {}) : {};
+                    const partyOptions = isMoment && host ? parties.filter(p => (host.parties || []).includes(p.id)) : parties;
+                    return (
+                      <tr key={s.id} className={selId === s.id ? "sel" : ""} onClick={() => setSelId(s.id)}>
+                        <td>
+                          {isMoment ? (<span className="end-val" title={host ? "A sub event on " + eventName(host, places) : "This sub event has no event"}>sub event</span>) : (
+                            <select className="cell-select" value={s.type} onClick={e => e.stopPropagation()} onChange={e => updateEvent(s.id, { type: e.target.value })}><option value="event">event</option><option value="travel">travel</option></select>)}
+                        </td>
+                        <td className="col-name">
+                          <div className="ev-cell" style={item.depth > 0 ? { paddingLeft: "12px" } : null}>
+                            {item.depth > 0 ? <span className="child-tick" title={host ? "On " + eventName(host, places) : ""}>{"↳"}</span> : null}
+                            {isMoment ? (
+                              <input className="cell-input" value={s.name} placeholder="what happens" onClick={e => e.stopPropagation()} onChange={e => updateSubEvent(s.id, { name: e.target.value })} />
+                            ) : (
+                              <input className="cell-input" value={s.label} placeholder={eventName({ ...s, label: "" }, places)} onClick={e => e.stopPropagation()} onChange={e => updateEvent(s.id, { label: e.target.value })} />
+                            )}
+                          </div>
+                        </td>
+                        <td className="col-parties">
+                          <div className="parties-cell">
+                            {partyOptions.map(p => { const on = (s.parties || []).includes(p.id); return (
+                              <span key={p.id} className={"pchip" + (on ? " on" : "")} style={on ? { background: p.color } : {}}
+                                onClick={ev => { if (!editable) return; ev.stopPropagation(); isMoment ? toggleSubEventParty(s.id, p.id) : toggleEventParty(s.id, p.id); }} title={p.name}>
+                                <span className="dot" style={{ background: on ? "#fff" : p.color }}></span>{p.name}
+                              </span>); })}
+                          </div>
+                        </td>
+                        <td>
+                          {isMoment ? (<span className="end-val" title="From the event it sits on">{host ? (placeLabel(host.location) || "(none)") : "(no event)"}</span>) : (
+                            <select className="cell-select" value={s.location || ""} onClick={e => e.stopPropagation()} onChange={e => updateEvent(s.id, { location: e.target.value || null })}><option value="">(none)</option>{places.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}</select>)}
+                        </td>
+                        <td>
+                          {isMoment ? (
+                            <select className="cell-select" value={s.pinned ? "pinned" : "float"} onClick={e => e.stopPropagation()}
+                              onChange={e => { const pin = e.target.value === "pinned"; if (pin) updateSubEvent(s.id, { pinned: true, start: r.start != null ? r.start : null }); else updateSubEvent(s.id, { pinned: false, start: null, offset: (r.start != null && hostRes.start != null) ? r.start - hostRes.start : 0 }); }}>
+                              <option value="float">floats with event</option><option value="pinned">pinned time</option>
+                            </select>
+                          ) : (
+                            <div className="after-cell">
+                              <select className="cell-select" value={s.follows || ""} onClick={e => e.stopPropagation()} onChange={e => updateEvent(s.id, { follows: e.target.value || null })}><option value="">(none)</option>{events.filter(o => o.id !== s.id).map(o => <option key={o.id} value={o.id}>{eventName(o, places)}</option>)}</select>
+                              {s.follows ? (<span className="after-mini"><span className="plus">+</span><input className="cell-input dur" type="number" min="0" style={{ width: "48px" }} value={s.gap == null ? "" : s.gap} placeholder="0" onClick={e => e.stopPropagation()} onChange={e => { const v = e.target.value; updateEvent(s.id, { gap: v === "" ? null : parseInt(v, 10) || 0 }); }} /><span className="mins">m</span></span>) : null}
+                            </div>
+                          )}
+                        </td>
+                        <td className="col-start">
+                          <div className="start-cell">
+                            {isMoment ? (s.pinned ? <span className="pin-dot" title="Pinned time"></span> : <span className="auto-chip" title={"Floats, " + (s.offset || 0) + " min into the event"}>{"+" + (s.offset || 0) + "m"}</span>) : (s.start != null ? <span className="pin-dot" title="Pinned start time"></span> : (s.follows ? <span className="auto-chip" title="Starts after another event">auto</span> : null))}
+                            <input
+                              className={"cell-input time" + ((isMoment ? s.pinned : s.start != null) ? " pinned" : " inherited")}
+                              defaultValue={isMoment ? fmtTime(r.start) : fmtTime(s.start)}
+                              key={s.id + "_" + (isMoment ? (r.start == null ? "n" : r.start) : (s.start == null ? "n" : s.start))}
+                              placeholder={isMoment ? "set time" : (s.start == null ? (r.start != null ? fmtTime(r.start) : "set time") : "9:00 am")}
+                              title={isMoment ? (s.pinned ? "Pinned. Switch to floats to let it ride along." : "Floats with the event. Typing a time changes how far into the event it sits.") : (s.start != null ? "Pinned. Clear it to fall back to starts after." : "Computed from starts after. Type a time to pin it.")}
+                              onClick={e => e.stopPropagation()}
+                              onBlur={e => { const v = parseTime(e.target.value);
+                                if (isMoment) { if (v === undefined || v === null) { e.target.value = fmtTime(r.start); return; } if (s.pinned) updateSubEvent(s.id, { start: v }); else if (hostRes.start != null) updateSubEvent(s.id, { offset: v - hostRes.start }); }
+                                else { if (v === undefined) { e.target.value = fmtTime(s.start); return; } updateEvent(s.id, { start: v }); } }}
+                              onKeyDown={e => { if (e.key === "Enter") e.target.blur(); }}
+                            />
+                          </div>
+                        </td>
+                        <td className="col-dur">
+                          <input className="cell-input dur" type="number" min="0" style={{ width: "72px" }} value={s.duration == null ? "" : s.duration} onClick={e => e.stopPropagation()} onChange={e => { const v = e.target.value; const patch = { duration: v === "" ? 0 : Math.max(0, parseInt(v, 10) || 0) }; isMoment ? updateSubEvent(s.id, patch) : updateEvent(s.id, patch); }} />
+                        </td>
+                        <td className="col-end">
+                          <span className={"end-field" + (r.end == null ? " unset" : "")} title="Computed end, start plus duration">{isMoment && s.duration === 0 ? "point" : (r.end == null ? "not set" : fmtTime(r.end))}</span>
+                        </td>
+                        <td>
+                          <select className={"cell-select status-sel st-" + s.status} value={s.status} onClick={e => e.stopPropagation()} onChange={e => { const patch = { status: e.target.value }; isMoment ? updateSubEvent(s.id, patch) : updateEvent(s.id, patch); }}><option value="confirmed">confirmed</option><option value="provisional">provisional</option><option value="unbooked">unbooked</option></select>
+                        </td>
+                        <td><input className="cell-input" style={{ minWidth: "110px" }} value={s.owner || ""} placeholder="owner" onClick={e => e.stopPropagation()} onChange={e => { const patch = { owner: e.target.value }; isMoment ? updateSubEvent(s.id, patch) : updateEvent(s.id, patch); }} /></td>
+                        <td><input className="cell-input" style={{ minWidth: "120px" }} value={(s.vendor && s.vendor.name) || ""} placeholder="vendor" onClick={e => e.stopPropagation()} onChange={e => { const patch = { vendor: { ...(s.vendor || { name: "", contact: "", phone: "", email: "" }), name: e.target.value } }; isMoment ? updateSubEvent(s.id, patch) : updateEvent(s.id, patch); }} /></td>
+                        <td><input className="cell-input" style={{ minWidth: "140px" }} value={s.notes} placeholder="notes" onClick={e => e.stopPropagation()} onChange={e => { const patch = { notes: e.target.value }; isMoment ? updateSubEvent(s.id, patch) : updateEvent(s.id, patch); }} /></td>
+                        <td className="col-warn">{w.length > 0 ? <span className="warnflag" title={w.join("\n")}>{"▲"}</span> : ""}</td>
+                        <td>
+                          {editable ? (
+                            <div className="row-actions" onClick={e => e.stopPropagation()}>
+                              {!isMoment ? <button className="icon-btn" title="Add a sub event on this line" onClick={() => addSubEvent(s.id, null)}>{"+"}</button> : null}
+                              <button className="icon-btn" title="Duplicate row" onClick={() => (isMoment ? duplicateSubEvent(s.id) : duplicateEvent(s.id))}>{"⧉"}</button>
+                              <button className="icon-btn danger" title="Delete row" onClick={() => (isMoment ? deleteSubEvent(s.id) : requestDeleteEvent(s.id))}>{"✕"}</button>
+                            </div>
+                          ) : null}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </React.Fragment>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+      </fieldset>
+      )}
+
+      {editable && allWarnings.length > 0 ? (
+        <div className="warnings-panel"><h3>Warnings ({allWarnings.length})</h3><ul>{allWarnings.map((w, i) => (<li key={i}><b>{w.name}:</b> {w.msg}</li>))}</ul></div>
+      ) : (editable ? <div className="no-warn">{"✓"} No validation warnings.</div> : null)}
+
+      {editable ? (
+        <div className="io">
+          <div className="io-card">
+            <h3>Saving</h3>
+            <p>Your changes save to the cloud automatically and sync to every device. {saveText ? saveText.charAt(0).toUpperCase() + saveText.slice(1) + "." : ""} You do not need to do anything to keep your work. Use download backup now and then if you want a copy on your computer.</p>
+            <div className="io-row">
+              <button className="btn" onClick={downloadBackup}>Download backup (JSON)</button>
+              <button className="btn" onClick={downloadCsv}>Export CSV</button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      <div className="foot">
+        <b>How time resolves:</b> an event is pinned when it has a start time, otherwise it starts when the event it follows ends, plus any gap. A sub event is either pinned to a clock time or floats, keeping its distance from the start of the event it sits on, so it rides along when that event moves. End is always start plus duration and is never editable. Times are stored as minutes from midnight and shown in 12 hour time.
+      </div>
+
+      <Inspector kind={selKind} row={selEvent || selSubEvent} events={events} subEvents={subEvents} parties={parties} places={places} resolved={resolved}
+        warnings={selId ? warningsById[selId] : null} editable={editable}
+        onUpdate={patch => (selKind === "event" ? updateEvent(selId, patch) : updateSubEvent(selId, patch))}
+        onDuplicate={() => (selKind === "event" ? duplicateEvent(selId) : duplicateSubEvent(selId))}
+        onDelete={() => (selKind === "event" ? requestDeleteEvent(selId) : deleteSubEvent(selId))}
+        onClose={() => setSelId(null)} onAddSubEvent={addSubEvent} onSelect={id => setSelId(id)} onUpdatePlace={updatePlace} onUpdateParty={updateParty} />
+
+      {confirm ? (
+        <div className="modal-scrim" onClick={() => setConfirm(null)}>
+          <div className="modal" role="dialog" aria-modal="true" onClick={e => e.stopPropagation()}>
+            <h3>{confirm.title}</h3>
+            <p className="modal-lead">This removes data from other rows:</p>
+            <ul className="modal-lines">{confirm.lines.map((l, i) => <li key={i}>{l}</li>)}</ul>
+            <div className="modal-actions">
+              <button className="btn" onClick={() => setConfirm(null)}>Cancel</button>
+              <button className="btn danger-btn solid" onClick={confirm.onConfirm}>{confirm.confirmLabel || "Delete"}</button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+</script>
+</body></html>
+</content>
