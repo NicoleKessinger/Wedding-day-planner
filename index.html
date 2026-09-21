@@ -227,13 +227,6 @@
   .foot { margin-top: 34px; font-size: 15px; color: var(--faint); line-height: 1.45; }
   .foot b { color: var(--muted); font-weight: 700; }
 
-  .app.with-inspector { padding-right: 380px; }
-  @media (max-width: 900px) { .app.with-inspector { padding-right: 20px; } }
-  .inspector { position: fixed; top: 0; right: 0; height: 100vh; width: 364px; max-width: 94vw; background: var(--surface); border-left: 1px solid var(--border); box-shadow: -12px 0 32px rgba(70,55,35,0.12); z-index: 50; display: flex; flex-direction: column; }
-  .insp-head { display: flex; align-items: center; justify-content: space-between; padding: 16px 18px; border-bottom: 1px solid var(--border); }
-  .insp-head h3 { margin: 0; font-size: 24px; font-weight: 700; }
-  .insp-body { padding: 16px 18px 28px; overflow-y: auto; display: flex; flex-direction: column; gap: 14px; }
-  .insp-scope { border: 0; margin: 0; padding: 0; min-inline-size: 0; display: flex; flex-direction: column; gap: 14px; }
   .fld { display: flex; flex-direction: column; gap: 4px; }
   .fld > span { font-size: 13px; text-transform: uppercase; letter-spacing: 0.12em; color: var(--muted); font-weight: 700; }
   .fld2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
@@ -251,6 +244,9 @@
   .insp-actions { display: flex; gap: 10px; margin-top: 4px; padding-top: 14px; border-top: 1px solid var(--border); }
   .danger-btn { color: var(--danger); border-color: var(--border-strong); }
   .danger-btn:hover { border-color: var(--danger); color: var(--danger); }
+  button.btn.danger-btn { color: var(--danger); }
+  button.btn.danger-btn:hover { border-color: var(--danger); color: var(--danger); }
+  button.btn.danger-btn.solid { color: #fff; }
 
   .ev-cell { display: flex; align-items: center; gap: 4px; min-width: 250px; }
   .ev-cell .cell-input { width: 100%; min-width: 220px; }
@@ -303,6 +299,214 @@
     .authbar { justify-content: center; }
     .ov-stats { gap: 20px; }
     .seg-btn { padding: 7px 18px; }
+  }
+
+  /* ===== Card timeline, summary rail, filter chips ===== */
+  svg.i { width: 1em; height: 1em; fill: none; stroke: currentColor; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; flex: none; }
+  :root { --shadow-lift: 0 2px 4px rgba(70,55,35,0.06), 0 16px 34px rgba(70,55,35,0.10); }
+  .pdot { width: 11px; height: 11px; border-radius: 50%; flex: none; display: inline-block; }
+  .tabs { display: inline-flex; border: 1px solid var(--steel); border-radius: 999px; overflow: hidden; background: var(--surface); }
+  .tabs .seg-btn { display: flex; align-items: center; gap: 8px; }
+  .tabs .seg-btn svg { display: none; }
+  .tb-actions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .tb-actions .btn { display: inline-flex; align-items: center; gap: 8px; min-height: 40px; }
+  .viewopts { display: flex; gap: 14px; flex-wrap: wrap; align-items: center; margin: 14px 0 16px; }
+
+  .viewas { position: sticky; top: 0; z-index: 20; background: rgba(246,241,235,0.94); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); padding: 12px 0 10px; margin: 0 0 8px; }
+  .viewas-label { font-size: 13px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); margin: 0 0 6px; }
+  .chips { display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; padding: 2px 2px 4px; margin: 0 -2px; -webkit-overflow-scrolling: touch; }
+  .chips::-webkit-scrollbar { display: none; }
+  .fchip { flex: none; display: inline-flex; align-items: center; gap: 8px; min-height: 42px; padding: 0 16px; border-radius: 999px; border: 1px solid var(--border-strong); background: var(--surface); font-weight: 700; font-size: 17px; color: var(--muted); white-space: nowrap; cursor: pointer; }
+  .fchip:hover { border-color: var(--steel); color: var(--accent); }
+  .fchip[aria-pressed=true] { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .fchip[aria-pressed=true] .pdot { box-shadow: 0 0 0 2px rgba(255,255,255,0.75); }
+  .showing { font-size: 16px; color: var(--muted); margin: 6px 2px 0; }
+  .showing button { border: 0; background: none; color: var(--accent); font-weight: 700; font-size: 16px; padding: 0; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
+
+  .layout { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 0 36px; align-items: start; margin: 14px auto 0; max-width: 1180px; }
+  .layout > .rail-col { grid-column: 2; grid-row: 1; position: sticky; top: 112px; display: flex; flex-direction: column; gap: 16px; }
+  .layout > .tl { grid-column: 1; grid-row: 1; min-width: 0; }
+  .rail-toggle { display: none; }
+  .rcard { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 16px 18px; box-shadow: var(--shadow); }
+  .rcard h3 { margin: 0 0 8px; font-size: 22px; font-weight: 700; display: flex; align-items: center; gap: 10px; }
+  .rcard-warn { background: var(--warn-bg); border-color: var(--warn-border); }
+  .rcard-warn h3 { color: var(--warn-ink); }
+  .count { font-size: 16px; background: var(--lime); border: 1px solid var(--unbooked-edge); border-radius: 999px; padding: 0 10px; font-weight: 700; color: #000; }
+  .count.warn { background: var(--warn-bg); border-color: var(--warn-border); color: var(--warn-ink); }
+  .rlist { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+  .rlist li + li { border-top: 1px solid var(--border); }
+  .rbtn { width: 100%; text-align: left; border: 0; background: transparent; padding: 9px 0; display: flex; align-items: center; gap: 10px; color: var(--ink); cursor: pointer; }
+  .rbtn:hover .rt { color: var(--accent); }
+  .rbtn .rt { font-weight: 700; font-size: 18px; flex: 1; min-width: 0; }
+  .rbtn .rs { font-size: 15px; color: var(--muted); display: block; font-weight: 400; }
+  .rbtn svg { color: var(--faint); font-size: 16px; }
+  .prog-n { color: var(--ink); font-size: 20px; }
+  .bar { display: flex; height: 11px; border-radius: 99px; overflow: hidden; background: var(--surface-2); border: 1px solid var(--border); margin: 10px 0 8px; }
+  .bar span { display: block; height: 100%; }
+  .key { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 15px; color: var(--muted); }
+  .kdot { display: inline-block; width: 11px; height: 11px; border-radius: 50%; margin-right: 6px; vertical-align: -1px; border: 1.5px solid transparent; }
+  .k-c { background: var(--steel); } .k-t { background: var(--light-blue); border-color: var(--steel); } .k-u { background: var(--lime); border-color: var(--unbooked-edge); }
+  .glance { display: grid; grid-template-columns: auto 1fr; gap: 4px 14px; margin: 0; font-size: 18px; }
+  .glance dt { font-size: 13px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); padding-top: 4px; }
+  .glance dd { margin: 0; }
+  .fine { font-size: 15px; color: var(--muted); }
+  .warn-li { font-size: 16px !important; color: var(--warn-ink); line-height: 1.35; font-weight: 400 !important; }
+  .warn-li b { font-weight: 700; }
+
+  .tl-legend { display: flex; flex-wrap: wrap; gap: 4px 16px; font-size: 15px; color: var(--muted); margin: 0 0 4px; }
+  .sec { margin: 6px 0 4px; }
+  .sec-h { display: flex; align-items: center; gap: 14px; margin: 22px 0 10px; font-size: 26px; font-weight: 700; color: var(--accent); }
+  .sec-h::after { content: ""; flex: 1; height: 1px; background: var(--border-strong); }
+  .row { display: grid; grid-template-columns: 104px 30px minmax(0, 1fr); column-gap: 8px; position: relative; padding-bottom: 14px; }
+  .when { text-align: right; padding-top: 13px; line-height: 1.05; }
+  .when .t { font-size: 30px; font-variant-numeric: lining-nums tabular-nums; }
+  .when .t.nt { color: var(--faint); }
+  .when .ap { font-size: 15px; color: var(--muted); margin-left: 2px; }
+  .when .u { display: block; font-size: 15px; color: var(--faint); margin-top: 3px; }
+  .lane { position: relative; }
+  .lane::before { content: ""; position: absolute; left: 50%; top: 0; bottom: -14px; width: 2px; transform: translateX(-50%); background: var(--border-strong); }
+  .row:last-child .lane::before { bottom: auto; height: 30px; }
+  .row.first .lane::before { top: 30px; }
+  .row.first:last-child .lane::before { display: none; }
+  .row.trip .lane::before { background: repeating-linear-gradient(to bottom, var(--steel) 0 4px, transparent 4px 9px); }
+  .node { position: absolute; left: 50%; top: 19px; width: 16px; height: 16px; border-radius: 50%; transform: translateX(-50%); z-index: 1; box-shadow: 0 0 0 4px var(--bg); border: 2px solid var(--steel); background: var(--steel); }
+  .node.tentative { background: var(--light-blue); border-color: var(--steel); }
+  .node.unbooked { background: var(--lime); border-color: var(--unbooked-edge); }
+  .row.trip .node { width: 12px; height: 12px; top: 20px; background: var(--bg); border-color: var(--steel); }
+
+  .card { display: block; width: 100%; text-align: left; background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 15px 18px 14px; box-shadow: var(--shadow); transition: transform .15s, box-shadow .15s, border-color .15s; color: var(--ink); cursor: pointer; font-family: var(--font-ui); }
+  .card:hover { border-color: var(--steel); box-shadow: var(--shadow-lift); transform: translateY(-1px); }
+  .row.sel .card { border-color: var(--steel); box-shadow: 0 0 0 2px var(--steel), var(--shadow-lift); }
+  .card-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+  .card h3 { margin: 0; font-size: 23px; line-height: 1.15; font-weight: 700; }
+  .where { display: flex; align-items: center; gap: 7px; margin-top: 3px; font-size: 17px; color: var(--muted); }
+  .where.until-only, .until-inline { display: none; }
+  .badge { flex: none; font-size: 14px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; border-radius: 999px; padding: 1px 11px; white-space: nowrap; margin-top: 2px; display: inline-block; }
+  .badge.s-provisional { background: var(--accent-soft); color: var(--accent); border: 1px solid var(--light-blue); }
+  .badge.s-unbooked { background: var(--lime); color: #000; border: 1px solid var(--unbooked-edge); }
+  .badge.s-confirmed { background: var(--accent-soft); color: var(--accent); border: 1px solid var(--steel); }
+  .wholine { display: flex; flex-wrap: wrap; gap: 2px 14px; margin-top: 9px; font-size: 16px; color: var(--muted); }
+  .wholine span { display: inline-flex; align-items: center; gap: 6px; }
+  .moments { list-style: none; margin: 11px 0 0; padding: 10px 0 0; border-top: 1px solid var(--border); display: flex; flex-direction: column; gap: 3px; }
+  .moments li { display: flex; gap: 12px; font-size: 17px; align-items: baseline; }
+  .moments .mt { width: 74px; flex: none; color: var(--accent); font-weight: 700; font-variant-numeric: lining-nums tabular-nums; }
+  .moments .more { color: var(--faint); font-size: 15px; padding-left: 86px; }
+  .flag { display: flex; gap: 8px; align-items: flex-start; margin-top: 10px; padding: 7px 11px; border-radius: 9px; background: var(--warn-bg); border: 1px solid var(--warn-border); color: var(--warn-ink); font-size: 16px; line-height: 1.3; }
+  .trip-btn { display: flex; align-items: center; flex-wrap: wrap; gap: 4px 12px; width: 100%; text-align: left; border: 1px dashed var(--steel); background: rgba(201,221,242,0.35); border-radius: 999px; padding: 7px 18px; color: var(--ink); transition: background .15s; cursor: pointer; font-family: var(--font-ui); }
+  .trip-btn:hover { background: var(--accent-soft); }
+  .row.sel .trip-btn { background: var(--accent-soft); border-style: solid; }
+  .trip-btn .tt { display: inline-flex; align-items: center; gap: 8px; font-weight: 700; font-size: 17px; color: var(--accent); }
+  .trip-btn .tm { font-size: 16px; color: var(--muted); }
+  .trip-btn .tm-who { display: inline-flex; gap: 10px; flex-wrap: wrap; }
+  .trip-btn .tm-who span { display: inline-flex; align-items: center; gap: 5px; }
+  .trip-btn .tm-warn { color: var(--warn-ink); font-weight: 700; }
+  .row.trip .when { padding-top: 10px; }
+  .row.trip .when .t { font-size: 21px; color: var(--muted); }
+  .row.trip { padding-bottom: 10px; }
+  .tl-empty { padding: 44px 16px; text-align: center; color: var(--muted); background: var(--surface); border: 1px dashed var(--border-strong); border-radius: 14px; }
+  .tl-empty-title { font-size: 24px; font-weight: 700; color: var(--ink); margin: 0 0 4px; }
+  .tl-empty p { margin: 0 0 14px; }
+
+  /* ===== Detail panel: drawer on desktop, bottom sheet on phones ===== */
+  .dscrim { position: fixed; inset: 0; background: rgba(30,26,20,0.38); z-index: 45; animation: dfade .2s ease-out; }
+  .dpanel { position: fixed; top: 0; right: 0; height: 100dvh; width: 440px; max-width: 100vw; background: var(--surface); z-index: 50; box-shadow: -16px 0 40px rgba(70,55,35,0.16); display: flex; flex-direction: column; animation: dslide .25s cubic-bezier(.2,.8,.2,1); }
+  @keyframes dslide { from { transform: translateX(105%); } to { transform: none; } }
+  @keyframes dsheet { from { transform: translateY(105%); } to { transform: none; } }
+  @keyframes dfade { from { opacity: 0; } to { opacity: 1; } }
+  .grab { display: none; }
+  .panel-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; padding: 20px 22px 14px; border-bottom: 1px solid var(--border); }
+  .panel-head h2 { margin: 6px 0 2px; font-size: 30px; line-height: 1.1; font-weight: 700; }
+  .panel-sub { margin: 0; color: var(--muted); font-size: 18px; }
+  .x { width: 42px; height: 42px; border-radius: 50%; border: 1px solid var(--border); background: var(--surface); display: flex; align-items: center; justify-content: center; font-size: 18px; color: var(--muted); flex: none; cursor: pointer; }
+  .x:hover { border-color: var(--steel); color: var(--accent); }
+  .panel-body { flex: 1; min-height: 0; overflow-y: auto; padding: 6px 22px 24px; overscroll-behavior: contain; }
+  .psec { padding: 16px 0; border-bottom: 1px solid var(--border); }
+  .psec:last-child { border-bottom: 0; }
+  .psec h4 { margin: 0 0 10px; font-size: 13px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); display: flex; align-items: center; gap: 8px; }
+  .psec.private { background: var(--surface-2); margin: 14px -22px 0; padding: 16px 22px 20px; border: 0; }
+  .psec.private h4 { color: var(--accent); }
+  .lockline { font-size: 15px; color: var(--muted); margin: -4px 0 12px; }
+  .dpanel .fld { margin-bottom: 12px; }
+  .dpanel .fld:last-child { margin-bottom: 0; }
+  .dpanel .fld > span { font-size: 15px; text-transform: none; letter-spacing: 0; font-weight: 400; color: var(--muted); }
+  .dpanel .cell-input.bx, .dpanel .cell-select.bx { min-height: 44px; }
+  .dpanel .insp-notes { min-height: 76px; }
+  .dpanel .pchips, .pchips { display: flex; flex-wrap: wrap; gap: 8px; }
+  .dpanel .pchip { min-height: 40px; padding: 0 14px; font-size: 16px; font-weight: 700; }
+  .stseg { display: grid; grid-template-columns: repeat(3, 1fr); border: 1px solid var(--border-strong); border-radius: 12px; overflow: hidden; }
+  .stseg button { border: 0; background: var(--surface); padding: 9px 6px; font-weight: 700; font-size: 16px; color: var(--muted); min-height: 44px; display: flex; align-items: center; justify-content: center; line-height: 1.1; cursor: pointer; }
+  .stseg button + button { border-left: 1px solid var(--border-strong); }
+  .stseg button[aria-pressed=true] { background: var(--accent); color: #fff; }
+  .stseg button[aria-pressed=true].u { background: var(--lime); color: #000; }
+  .mlist { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+  .mlist li { display: flex; gap: 12px; align-items: center; padding: 8px 12px; background: var(--surface-2); border-radius: 10px; }
+  .mlist .mt { width: 78px; color: var(--accent); font-weight: 700; }
+  .mlist .mn { flex: 1; }
+  .plist { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 6px; font-size: 18px; }
+  .plist li { display: flex; align-items: center; gap: 9px; }
+  .rowline { display: flex; align-items: center; gap: 8px; margin: 0 0 6px; font-size: 18px; }
+  .panel-foot { display: flex; align-items: center; gap: 10px; padding: 12px 22px calc(12px + env(safe-area-inset-bottom)); border-top: 1px solid var(--border); background: var(--surface); }
+  .panel-foot .btn { min-height: 42px; }
+  .dpanel .sub-item { min-height: 44px; }
+
+  /* ===== Tablet ===== */
+  @media (max-width: 980px) {
+    .layout { grid-template-columns: minmax(0, 1fr); }
+    .rail-toggle { display: flex; align-items: center; justify-content: space-between; gap: 10px; width: 100%; text-align: left; background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 11px 16px; box-shadow: var(--shadow); margin-top: 6px; font-weight: 700; font-size: 17px; color: var(--ink); min-height: 48px; cursor: pointer; }
+    .rail-toggle .rt-l { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+    .rail-toggle .count { font-size: 15px; }
+    .rail-toggle svg { transition: transform .2s; color: var(--faint); }
+    .rail-toggle[aria-expanded=true] svg { transform: rotate(90deg); }
+    .layout > .rail-col { display: none; grid-column: 1; grid-row: 1; position: static; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 8px; }
+    .layout > .rail-col.open { display: grid; }
+    .layout > .tl { grid-row: 2; }
+  }
+  /* ===== Phone ===== */
+  @media (max-width: 640px) {
+    .app { padding-bottom: 150px; }
+    .who { display: none; }
+    .layout > .rail-col { grid-template-columns: 1fr; }
+    .row { grid-template-columns: 52px 20px minmax(0, 1fr); column-gap: 6px; }
+    .when .t { font-size: 25px; }
+    .when .ap { display: block; font-size: 14px; margin: 1px 0 0; }
+    .when .u { display: none; }
+    .until-inline { display: inline; }
+    .where.until-only { display: block; }
+    .card { padding: 13px 15px 12px; }
+    .card h3 { font-size: 21px; }
+    .card-top { flex-direction: column-reverse; align-items: flex-start; gap: 6px; }
+    .row.trip .when .t { font-size: 19px; }
+    .trip-btn { border-radius: 16px; padding: 8px 14px; }
+    .moments .mt { width: 70px; }
+    .moments .more { padding-left: 82px; }
+    .sec-h { font-size: 24px; }
+    .toolbar { display: flex; justify-content: flex-end; }
+    .toolbar .print-btn { display: none; }
+    /* bottom tab bar replaces the top toggle */
+    .tabs { position: fixed; left: 12px; right: 12px; bottom: calc(10px + env(safe-area-inset-bottom)); z-index: 30; justify-content: space-around; border: 1px solid var(--border-strong); border-radius: 22px; background: rgba(255,255,255,0.94); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); box-shadow: var(--shadow-lift); padding: 4px; }
+    .tabs .seg-btn { flex: 1; flex-direction: column; gap: 2px; padding: 7px 4px; border-radius: 18px; font-size: 15px; justify-content: center; }
+    .tabs .seg-btn svg { display: block; font-size: 22px; }
+    .add-btn { position: fixed; right: 18px; bottom: calc(86px + env(safe-area-inset-bottom)); z-index: 31; width: 58px; height: 58px; border-radius: 50%; padding: 0 !important; justify-content: center; box-shadow: var(--shadow-lift); }
+    .add-btn span { display: none; }
+    .add-btn svg { font-size: 26px; }
+    /* detail panel becomes a bottom sheet */
+    .dpanel { top: auto; bottom: 0; left: 0; right: 0; width: 100%; height: auto; max-height: 92dvh; border-radius: 22px 22px 0 0; box-shadow: 0 -14px 40px rgba(70,55,35,0.22); animation-name: dsheet; }
+    .grab { display: block; width: 44px; height: 5px; border-radius: 9px; background: var(--border-strong); margin: 9px auto 0; }
+    .panel-head { padding: 12px 18px 12px; }
+    .panel-head h2 { font-size: 27px; }
+    .panel-body { padding: 4px 18px 20px; }
+    .psec.private { margin: 14px -18px 0; padding: 16px 18px 20px; }
+    .panel-foot { padding: 10px 18px calc(12px + env(safe-area-inset-bottom)); }
+  }
+  @media print {
+    body { background: #fff; }
+    .authbar, .toolbar, .tabs, .add-btn, .viewas, .rail-toggle, .rail-col, .dpanel, .dscrim, .foot, .io, .banner, .manager, .flag, .tm-warn { display: none !important; }
+    .app { padding: 0; max-width: none; }
+    .masthead { border-bottom: 1px solid #999; padding-bottom: 8px; margin-bottom: 8px; }
+    .countdown { display: none; }
+    .layout { display: block; max-width: none; }
+    .card, .trip-btn { box-shadow: none; break-inside: avoid; }
+    .row { break-inside: avoid; }
   }
 </style>
 </head>
@@ -459,12 +663,12 @@ function validateEvent(event, events, places, resolved) {
   if (event.follows && hasCycle(events, event.id)) msgs.push("This event follows a chain that loops back to itself, so its time cannot be worked out.");
   if (event.location && !places.find(p => p.id === event.location)) msgs.push("Place is not in the places list.");
   if (!event.location) msgs.push("No place set.");
-  if (!(event.parties || []).length) msgs.push("Nobody is on this event, so it draws no line.");
+  if (!(event.parties || []).length) msgs.push("No group is on this event yet.");
   if (event.start !== null && event.start !== undefined && event.follows) {
     const fRes = resolved[event.follows];
     if (fRes && fRes.end !== null && fRes.end !== undefined && event.start < fRes.end) {
       const f = byId[event.follows];
-      msgs.push("Pinned start " + fmtTime(event.start) + " is before " + (f ? eventName(f, places) : "the earlier event") + " ends at " + fmtTime(fRes.end) + ".");
+      msgs.push("The start time " + fmtTime(event.start) + " is before " + (f ? eventName(f, places) : "the earlier event") + " ends at " + fmtTime(fRes.end) + ".");
     }
   }
   if (event.type === "travel" && event.follows) {
@@ -472,7 +676,7 @@ function validateEvent(event, events, places, resolved) {
     if (f && f.location && event.location) {
       const dt = driveTime(places, f.location, event.location);
       if (dt !== null && event.duration !== null && event.duration !== undefined && event.duration < dt)
-        msgs.push("Duration " + event.duration + " min is shorter than the " + dt + " min drive between these two places.");
+        msgs.push("The drive is about " + dt + " min, and this allows " + event.duration + ".");
     }
   }
   return msgs;
@@ -481,7 +685,7 @@ function validateEvent(event, events, places, resolved) {
 function validateSubEvent(mo, events, parties, resolved, places) {
   const msgs = [];
   const host = events.find(s => s.id === mo.event);
-  if (!host) { msgs.push("This sub event is not on an event, so it has no line to sit on."); return msgs; }
+  if (!host) { msgs.push("This moment is not part of an event yet."); return msgs; }
   const hr = resolved[host.id] || {}; const r = resolved[mo.id] || {};
   if (hr.start != null && hr.end != null && r.start != null) {
     const end = r.end != null ? r.end : r.start;
@@ -489,9 +693,9 @@ function validateSubEvent(mo, events, parties, resolved, places) {
       msgs.push("This runs " + fmtTime(r.start) + " to " + fmtTime(end) + ", outside " + eventName(host, places) + ", which runs " + fmtTime(hr.start) + " to " + fmtTime(hr.end) + ".");
   }
   (mo.parties || []).forEach(pid => {
-    if (!(host.parties || []).includes(pid)) { const p = parties.find(x => x.id === pid); msgs.push((p ? p.name : "A party") + " is on this sub event but not on " + eventName(host, places) + "."); }
+    if (!(host.parties || []).includes(pid)) { const p = parties.find(x => x.id === pid); msgs.push((p ? p.name : "A group") + " is on this moment but not on " + eventName(host, places) + "."); }
   });
-  if (!(mo.parties || []).length) msgs.push("Nobody is on this sub event, so it draws no node.");
+  if (!(mo.parties || []).length) msgs.push("No group is on this moment yet.");
   return msgs;
 }
 
@@ -511,7 +715,7 @@ function normEvent(s) {
     buffer: s.buffer !== undefined ? s.buffer : null,
     status: s.status || "provisional", owner: s.owner || "",
     vendor: normVendor(s.vendor), links: normLinks(s.links),
-    callTimes: (s.callTimes && typeof s.callTimes === "object") ? { ...s.callTimes } : {}, notes: s.notes || "",
+    callTimes: (s.callTimes && typeof s.callTimes === "object") ? { ...s.callTimes } : {}, notes: s.notes || "", publicNotes: s.publicNotes || "",
   };
 }
 function normSubEvent(m) {
@@ -525,7 +729,7 @@ function normSubEvent(m) {
     duration: (m.duration === null || m.duration === undefined) ? 0 : m.duration,
     status: m.status || "provisional", owner: m.owner || "",
     vendor: normVendor(m.vendor), links: normLinks(m.links),
-    callTimes: (m.callTimes && typeof m.callTimes === "object") ? { ...m.callTimes } : {}, notes: m.notes || "",
+    callTimes: (m.callTimes && typeof m.callTimes === "object") ? { ...m.callTimes } : {}, notes: m.notes || "", publicNotes: m.publicNotes || "",
   };
 }
 function normPlace(p) { return { id: p.id, name: p.name || "", drives: p.drives || {}, address: p.address || "", contact: p.contact || "" }; }
@@ -631,7 +835,7 @@ function csvCell(v) { const s = String(v === null || v === undefined ? "" : v); 
 function buildCsv(events, subEvents, parties, places, resolved) {
   const pName = id => { const p = parties.find(x => x.id === id); return p ? p.name : id; };
   const plName = id => { const p = places.find(x => x.id === id); return p ? p.name : (id || ""); };
-  const header = ["row","on event","type","name","parties","place","starts after","start","pinned","duration","end","status","owner","vendor","notes"];
+  const header = ["row","on event","type","name","parties","place","starts after","start","pinned","duration","end","status","owner","vendor","public notes","private notes"];
   const lines = [header.map(csvCell).join(",")];
   const ordered = [];
   events.slice().sort((a, b) => { const ra = resolved[a.id] || {}, rb = resolved[b.id] || {}; return (ra.start == null ? 1e9 : ra.start) - (rb.start == null ? 1e9 : rb.start); }).forEach(s => {
@@ -643,15 +847,15 @@ function buildCsv(events, subEvents, parties, places, resolved) {
     const s = it.row; const r = resolved[s.id] || {};
     if (it.kind === "event") {
       const f = events.find(x => x.id === s.follows);
-      lines.push(["event","",s.type,eventName(s, places),(s.parties || []).map(pName).join(" | "),plName(s.location),f ? eventName(f, places) : "",fmtTime(r.start),s.start != null ? "yes" : "no",s.duration,fmtTime(r.end),s.status,s.owner || "",(s.vendor && s.vendor.name) || "",s.notes || ""].map(csvCell).join(","));
+      lines.push(["event","",s.type,eventName(s, places),(s.parties || []).map(pName).join(" | "),plName(s.location),f ? eventName(f, places) : "",fmtTime(r.start),s.start != null ? "yes" : "no",s.duration,fmtTime(r.end),s.status,s.owner || "",(s.vendor && s.vendor.name) || "",s.publicNotes || "",s.notes || ""].map(csvCell).join(","));
     } else {
-      lines.push(["sub event",it.host ? eventName(it.host, places) : "",s.duration > 0 ? "span" : "point",s.name,(s.parties || []).map(pName).join(" | "),it.host ? plName(it.host.location) : "","",fmtTime(r.start),s.pinned ? "yes" : "no",s.duration,fmtTime(r.end),s.status,s.owner || "",(s.vendor && s.vendor.name) || "",s.notes || ""].map(csvCell).join(","));
+      lines.push(["moment",it.host ? eventName(it.host, places) : "",s.duration > 0 ? "span" : "point",s.name,(s.parties || []).map(pName).join(" | "),it.host ? plName(it.host.location) : "","",fmtTime(r.start),s.pinned ? "yes" : "no",s.duration,fmtTime(r.end),s.status,s.owner || "",(s.vendor && s.vendor.name) || "",s.publicNotes || "",s.notes || ""].map(csvCell).join(","));
     }
   });
   return lines.join("\n");
 }
 /* ================= Map ================= */
-function MapView({ events, subEvents, parties, places, resolved, selId, setSelId, collapse, showLabels, onMovePlaceTo, onAddEvent, onAddSubEvent, filter, editable: editableProp }) {
+function MapView({ events, subEvents, parties, places, resolved, selId, setSelId, collapse, showLabels, onMovePlaceTo, onAddEvent, onAddSubEvent, filter, editable: editableProp, onExpandedChange }) {
   const matches = s => filter === "all" || !filter || s.status !== "confirmed";
   const svgRef = useRef(null); const wrapRef = useRef(null);
   const [dragId, setDragId] = useState(null);
@@ -663,6 +867,7 @@ function MapView({ events, subEvents, parties, places, resolved, selId, setSelId
   const highlight = hoverParty || focusParty;
   const [expanded, setExpanded] = useState(false);
   const shellRef = useRef(null);
+  useEffect(() => { if (onExpandedChange) onExpandedChange(expanded); return () => { if (onExpandedChange && expanded) onExpandedChange(false); }; }, [expanded]);
   const editable = editableProp && !expanded;   /* the expanded map is for viewing only */
   function expandMap() {
     setExpanded(true);
@@ -793,7 +998,7 @@ function MapView({ events, subEvents, parties, places, resolved, selId, setSelId
   if (focusParty && rankOf[focusParty] != null) {
     const raw = [];
     placed.filter(s => (s.parties || []).includes(focusParty)).forEach(s => { const r = resolved[s.id]; raw.push({ id: s.id, x: colX(colIndex[s.location]) + trackOff(focusParty), y: yFor(r.start), text: eventName(s, places) + " " + fmtTime(r.start) }); });
-    shownSubEvents.filter(m => (m.parties || []).includes(focusParty)).forEach(m => { const host = byEvent[m.event]; const r = resolved[m.id]; raw.push({ id: m.id, x: xAt(host, focusParty), y: yFor(r.start), text: (m.name || "sub event") + " " + fmtTime(r.start) }); });
+    shownSubEvents.filter(m => (m.parties || []).includes(focusParty)).forEach(m => { const host = byEvent[m.event]; const r = resolved[m.id]; raw.push({ id: m.id, x: xAt(host, focusParty), y: yFor(r.start), text: (m.name || "moment") + " " + fmtTime(r.start) }); });
     raw.sort((a, b) => a.y - b.y);
     let lastY = -1e9; raw.forEach(it => { let ly = it.y; if (ly < lastY + 19) ly = lastY + 19; lastY = ly; focusLabels.push({ ...it, ly }); });
   }
@@ -815,7 +1020,7 @@ function MapView({ events, subEvents, parties, places, resolved, selId, setSelId
         </div>
         <div className="seg sm">
           <button className={"seg-btn" + (density === "full" ? " on" : "")} onClick={() => setDensity("full")}>Full</button>
-          <button className={"seg-btn" + (density === "key" ? " on" : "")} onClick={() => setDensity("key")}>Key sub events</button>
+          <button className={"seg-btn" + (density === "key" ? " on" : "")} onClick={() => setDensity("key")}>Key moments</button>
         </div>
         <label className="mc-focus">Focus
           <select className="cell-select" value={focusParty || ""} onChange={e => setFocusParty(e.target.value || null)}>
@@ -835,14 +1040,14 @@ function MapView({ events, subEvents, parties, places, resolved, selId, setSelId
             className={"pl-item clickable" + (focusParty === p.id ? " on" : "") + (highlight && highlight !== p.id ? " dim" : "")}
             onClick={() => setFocusParty(focusParty === p.id ? null : p.id)}
             onMouseEnter={() => setHoverParty(p.id)} onMouseLeave={() => setHoverParty(null)}
-            title={focusParty === p.id ? "Click to clear focus" : "Click to focus this party, hover to highlight"}>
+            title={focusParty === p.id ? "Click to clear focus" : "Click to focus this group, hover to highlight"}>
             <span className="pl-dot" style={{ background: p.color }}></span>{p.name}
           </span>
         ))}
       </div>
       <p className="map-hint">{editable
-        ? "Tip: click a line where something happens to put a sub event on it, or click empty space in a column to add an event. Click a party in the key to focus its line. Drag a column header to reorder places."
-        : "Tip: click a party in the key to focus its line, or use Focus to follow one group through the day."}</p>
+        ? "Tip: click a line where something happens to put a moment on it, or click empty space in a column to add an event. Click a group in the key to focus its line. Drag a column header to reorder places."
+        : "Tip: click a group in the key to focus its line, or use Focus to follow one group through the day."}</p>
       <div className="map-wrap" ref={wrapRef}>
         <svg className="mapsvg mapsvg-head" width={width} height={HEAD_H} viewBox={"0 0 " + width + " " + HEAD_H} aria-hidden="true">
       {places.map((pl, i) => (
@@ -924,7 +1129,7 @@ function MapView({ events, subEvents, parties, places, resolved, selId, setSelId
                       <line x1={sx} y1={y1} x2={dx} y2={y2} stroke={col} strokeWidth={st.w} strokeOpacity={st.op * d} strokeDasharray={st.dash} strokeLinecap="round" />
                       {!isTravel ? <circle cx={dx} cy={y1} r={st.w / 2 + 2} fill="var(--surface)" stroke={col} strokeWidth="2.5" strokeOpacity={st.op * d} /> : null}
                       {!isTravel ? <circle cx={dx} cy={y2} r={st.w / 2 + 2} fill="var(--surface)" stroke={col} strokeWidth="2.5" strokeOpacity={st.op * d} /> : null}
-                      <title>{eventName(s, places) + ", " + fmtTime(r.start) + " to " + fmtTime(r.end) + ", " + s.status}</title>
+                      <title>{eventName(s, places) + ", " + fmtTime(r.start) + " to " + fmtTime(r.end) + ", " + statusText(s.status, !editableProp)}</title>
                     </g>
                   );
                 })}
@@ -940,7 +1145,7 @@ function MapView({ events, subEvents, parties, places, resolved, selId, setSelId
             const pids = (m.parties || []).filter(pid => rankOf[pid] != null && (host.parties || []).includes(pid));
             if (!pids.length) return null;
             const xs = pids.map(pid => xAt(host, pid)); const minX = Math.min(...xs), maxX = Math.max(...xs);
-            const txt = (m.name || "unnamed sub event") + " " + fmtTime(r.start);
+            const txt = (m.name || "unnamed moment") + " " + fmtTime(r.start);
             const labelX = maxX + 11; const shown = fitText(txt, colRightEdge(host.location) - labelX - 6); const w = shown.length * PER_CHAR + 13;
             return (
               <g key={"mo" + m.id} style={{ cursor: "pointer" }} onClick={() => setSelId(m.id)}>
@@ -956,7 +1161,7 @@ function MapView({ events, subEvents, parties, places, resolved, selId, setSelId
                     </g>
                   );
                 })}
-                <title>{(m.name || "unnamed sub event") + ", " + fmtTime(r.start) + (isSpan && r.end != null ? " to " + fmtTime(r.end) : "") + ", on " + eventName(host, places) + (m.pinned ? ", pinned" : ", floats with the event")}</title>
+                <title>{(m.name || "unnamed moment") + ", " + fmtTime(r.start) + (isSpan && r.end != null ? " to " + fmtTime(r.end) : "") + ", on " + eventName(host, places) + (m.pinned ? ", fixed time" : ", follows the event")}</title>
                 {((showLabels && !highlight) || sel) ? (
                   <g style={{ pointerEvents: "none" }}>
                     <rect x={labelX} y={y1 - 10} width={w} height={20} rx={4} style={{ fill: "var(--surface)", stroke: sel ? "var(--accent)" : "var(--border)" }} strokeWidth="1" opacity="0.96" />
@@ -1000,12 +1205,12 @@ function MapView({ events, subEvents, parties, places, resolved, selId, setSelId
 
       <div className="legend">
         <span className="li"><svg width="34" height="10" aria-hidden="true"><line x1="2" y1="5" x2="32" y2="5" style={{ stroke: "var(--ink)" }} strokeWidth="7" strokeLinecap="round" /></svg> confirmed</span>
-        <span className="li"><svg width="34" height="10" aria-hidden="true"><line x1="2" y1="5" x2="32" y2="5" style={{ stroke: "var(--ink)" }} strokeWidth="5" strokeOpacity="0.62" strokeLinecap="round" /></svg> provisional</span>
-        <span className="li"><svg width="34" height="10" aria-hidden="true"><line x1="2" y1="5" x2="32" y2="5" style={{ stroke: "var(--ink)" }} strokeWidth="5" strokeDasharray="10 7" strokeLinecap="round" /></svg> unbooked</span>
+        <span className="li"><svg width="34" height="10" aria-hidden="true"><line x1="2" y1="5" x2="32" y2="5" style={{ stroke: "var(--ink)" }} strokeWidth="5" strokeOpacity="0.62" strokeLinecap="round" /></svg> {editableProp ? "tentative" : "to be confirmed"}</span>
+        <span className="li"><svg width="34" height="10" aria-hidden="true"><line x1="2" y1="5" x2="32" y2="5" style={{ stroke: "var(--ink)" }} strokeWidth="5" strokeDasharray="10 7" strokeLinecap="round" /></svg> {editableProp ? "still to book" : "details still open"}</span>
         <span className="li"><svg width="40" height="16" aria-hidden="true"><line x1="4" y1="13" x2="36" y2="3" style={{ stroke: "var(--ink)" }} strokeWidth="3" strokeLinecap="round" /></svg> travel between places</span>
-        <span className="li"><svg width="18" height="14" aria-hidden="true"><circle cx="9" cy="7" r="4.5" style={{ fill: "var(--surface)", stroke: "var(--ink)" }} strokeWidth="2" /></svg> sub event on a line</span>
-        <span className="li"><svg width="18" height="14" aria-hidden="true"><circle cx="9" cy="7" r="4.5" style={{ fill: "var(--surface)", stroke: "var(--ink)" }} strokeWidth="3.4" /></svg> pinned sub event</span>
-        <span className="li"><svg width="18" height="14" aria-hidden="true"><circle cx="9" cy="7" r="3.2" style={{ fill: "var(--surface)", stroke: "var(--ink)" }} strokeWidth="1.6" strokeOpacity="0.7" /></svg> where a sub event ends</span>
+        <span className="li"><svg width="18" height="14" aria-hidden="true"><circle cx="9" cy="7" r="4.5" style={{ fill: "var(--surface)", stroke: "var(--ink)" }} strokeWidth="2" /></svg> moment on a line</span>
+        <span className="li"><svg width="18" height="14" aria-hidden="true"><circle cx="9" cy="7" r="4.5" style={{ fill: "var(--surface)", stroke: "var(--ink)" }} strokeWidth="3.4" /></svg> fixed-time moment</span>
+        <span className="li"><svg width="18" height="14" aria-hidden="true"><circle cx="9" cy="7" r="3.2" style={{ fill: "var(--surface)", stroke: "var(--ink)" }} strokeWidth="1.6" strokeOpacity="0.7" /></svg> where a moment ends</span>
         <span className="li"><svg width="34" height="10" aria-hidden="true"><line x1="2" y1="5" x2="32" y2="5" style={{ stroke: "var(--ink)" }} strokeWidth="2.5" strokeOpacity="0.32" strokeDasharray="1 7" strokeLinecap="round" /></svg> continues, not planned</span>
       </div>
     </div>
@@ -1044,7 +1249,7 @@ function VendorBlock({ row, onUpdate }) {
 
 function CallTimes({ row, parties, onUpdate }) {
   const callTimes = row.callTimes || {};
-  if (!(row.parties || []).length) return <div className="fld"><span>Call times</span><div className="insp-inherit"><em>Add parties to set their call times.</em></div></div>;
+  if (!(row.parties || []).length) return <div className="fld"><span>Call times</span><div className="insp-inherit"><em>Add groups to set their call times.</em></div></div>;
   return (
     <div className="fld"><span>Call times</span>
       <div className="calltimes">
@@ -1061,245 +1266,462 @@ function CallTimes({ row, parties, onUpdate }) {
             </div>
           );
         })}
-        <p className="ct-hint">The greyed time is each party's default call time. Type here to set one just for this row.</p>
+        <p className="ct-hint">The greyed time is each group's default call time. Type here to set one just for this row.</p>
       </div>
     </div>
   );
 }
-/* ================= Inspector ================= */
-function Inspector({ kind, row, events, subEvents, parties, places, resolved, warnings, editable, onUpdate, onDuplicate, onDelete, onClose, onAddSubEvent, onSelect, onUpdatePlace, onUpdateParty }) {
+/* ================= Timeline helpers ================= */
+const STATUS_LABEL = { confirmed: "Confirmed", provisional: "Tentative", unbooked: "Still to book" };
+function statusText(st, viewer) { return st === "confirmed" ? "Confirmed" : (viewer ? "To be confirmed" : (STATUS_LABEL[st] || st)); }
+function fmtDur(m) { m = m || 0; const h = Math.floor(m / 60), mm = m % 60; if (!h && !mm) return "0 min"; return (h ? h + " hr" : "") + (h && mm ? " " : "") + (mm ? mm + " min" : ""); }
+function timeParts(mins) { const m = ((mins % 1440) + 1440) % 1440; const h = Math.floor(m / 60); return { n: (h % 12 || 12) + ":" + String(m % 60).padStart(2, "0"), ap: h < 12 ? "am" : "pm" }; }
+function cardTitle(s, places) {
+  if (s.label) return s.label;
+  const p = places.find(x => x.id === s.location);
+  if (s.type === "travel") return "Travel to " + (p ? p.name : "the next place");
+  return p ? p.name : "Untitled event";
+}
+const TIMELINE_SECTIONS = [
+  { key: "morning", label: "Morning", test: m => m < 720 },
+  { key: "afternoon", label: "Afternoon", test: m => m >= 720 && m < 1020 },
+  { key: "evening", label: "Evening", test: m => m >= 1020 },
+  { key: "unscheduled", label: "Time not set yet", test: null },
+];
+const ICONS = {
+  pin: <svg className="i" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 14.5s4.5-4.1 4.5-7.7a4.5 4.5 0 0 0-9 0C3.5 10.4 8 14.5 8 14.5z" /><circle cx="8" cy="6.8" r="1.6" /></svg>,
+  car: <svg className="i" viewBox="0 0 16 16" aria-hidden="true"><path d="M2.5 10.5v-2l1.4-3.3a1 1 0 0 1 .9-.6h6.4a1 1 0 0 1 .9.6l1.4 3.3v2M2.5 10.5h11M3.5 10.5v2h2v-2M10.5 10.5v2h2v-2" /><circle cx="5" cy="8.4" r=".4" /><circle cx="11" cy="8.4" r=".4" /></svg>,
+  chev: <svg className="i" viewBox="0 0 16 16" aria-hidden="true"><path d="M6 3.5 10.5 8 6 12.5" /></svg>,
+  x: <svg className="i" viewBox="0 0 16 16" aria-hidden="true"><path d="M3.5 3.5l9 9M12.5 3.5l-9 9" /></svg>,
+  plus: <svg className="i" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 3v10M3 8h10" /></svg>,
+  lock: <svg className="i" viewBox="0 0 16 16" aria-hidden="true"><rect x="3.2" y="7" width="9.6" height="6.5" rx="1.6" /><path d="M5.4 7V5.4a2.6 2.6 0 0 1 5.2 0V7" /></svg>,
+  list: <svg className="i" viewBox="0 0 16 16" aria-hidden="true"><path d="M3.5 3v10" /><circle cx="3.5" cy="4.5" r="1" /><circle cx="3.5" cy="11.5" r="1" /><path d="M7 4.5h6M7 8h6M7 11.5h6" /></svg>,
+  map: <svg className="i" viewBox="0 0 16 16" aria-hidden="true"><path d="M2.5 4.2 6 3l4 1.3L13.5 3v8.8L10 13 6 11.7 2.5 13z" /><path d="M6 3v8.7M10 4.3V13" /></svg>,
+  table: <svg className="i" viewBox="0 0 16 16" aria-hidden="true"><rect x="2.5" y="3" width="11" height="10" rx="1.5" /><path d="M2.5 6.5h11M2.5 9.8h11M7 6.5V13" /></svg>,
+  print: <svg className="i" viewBox="0 0 16 16" aria-hidden="true"><path d="M4.5 6V2.5h7V6M4.5 11.5h-2v-5h11v5h-2" /><rect x="4.5" y="9.5" width="7" height="4" /></svg>,
+};
+
+/* ================= Timeline (cards on a time rail) ================= */
+function TimelineView({ events, subEvents, parties, places, resolved, warningsById, selId, onSelect, viewer, viewAs, onAddEvent }) {
+  const partyById = {}; parties.forEach(p => { partyById[p.id] = p; });
+  const placeById = {}; places.forEach(p => { placeById[p.id] = p; });
+  const startOf = s => { const r = resolved[s.id]; return (r && r.start != null) ? r.start : 1e9; };
+  const items = events.filter(s => !viewAs || (s.parties || []).includes(viewAs)).slice().sort((a, b) => startOf(a) - startOf(b));
+  const bucketOf = s => { const st = startOf(s); if (st >= 1e9) return "unscheduled"; const d = TIMELINE_SECTIONS.find(x => x.test && x.test(st)); return d ? d.key : "evening"; };
+
+  if (!events.length) {
+    return (
+      <div className="tl-empty">
+        <p className="tl-empty-title">{viewer ? "The schedule is not published yet." : "Your day starts here."}</p>
+        <p>{viewer ? "Nicole and Michael will share it soon." : "Add your first event, like hair and makeup or the ceremony, and it will appear here as a card."}</p>
+        {!viewer ? <button className="btn primary" onClick={() => onAddEvent({})}>{ICONS.plus}Add your first event</button> : null}
+      </div>
+    );
+  }
+  if (!items.length) return <div className="tl-empty"><p>Nothing on the schedule for this group yet.</p></div>;
+
+  const whoText = s => (s.parties || []).map(pid => partyById[pid]).filter(Boolean);
+
+  return (
+    <div className="tl-list">
+      {TIMELINE_SECTIONS.map(sec => {
+        const rows = items.filter(s => bucketOf(s) === sec.key);
+        if (!rows.length) return null;
+        return (
+          <section className="sec" key={sec.key} aria-label={sec.label}>
+            <h2 className="sec-h">{sec.label}</h2>
+            {rows.map((s, idx) => {
+              const r = resolved[s.id] || {}; const has = r.start != null;
+              const tp = has ? timeParts(r.start) : null;
+              const travel = s.type === "travel";
+              const place = placeById[s.location] || null;
+              const title = cardTitle(s, places);
+              const w = warningsById[s.id] || [];
+              const sel = selId === s.id ? " sel" : "";
+              const first = idx === 0 ? " first" : "";
+              const untilTxt = (has && r.end != null && s.duration > 0 && !travel) ? "until " + fmtTime(r.end) : "";
+              const nodeCls = "node" + (s.status === "provisional" ? " tentative" : s.status === "unbooked" ? " unbooked" : "");
+              const when = (
+                <div className="when">
+                  {has ? (<React.Fragment><span className="t">{tp.n}</span><span className="ap">{tp.ap}</span>{untilTxt ? <span className="u">{untilTxt}</span> : null}</React.Fragment>) : <span className="t nt">{"–"}</span>}
+                </div>
+              );
+              if (travel) {
+                return (
+                  <div className={"row trip" + sel + first} key={s.id}>
+                    {when}
+                    <div className="lane"><span className="node"></span></div>
+                    <div>
+                      <button type="button" className="trip-btn" onClick={() => onSelect(s.id)} aria-label={title + (has ? ", " + fmtTime(r.start) : "") + ", " + fmtDur(s.duration)}>
+                        <span className="tt">{ICONS.car}{title}</span>
+                        <span className="tm">{fmtDur(s.duration)}</span>
+                        <span className="tm tm-who">{whoText(s).map(p => <span key={p.id}><i className="pdot" style={{ background: p.color }}></i>{p.name}</span>)}</span>
+                        {!viewer && w.length ? <span className="tm tm-warn">{"▲"} Needs a look</span> : null}
+                      </button>
+                    </div>
+                  </div>
+                );
+              }
+              const moments = subEvents.filter(m => m.event === s.id && (!viewAs || (m.parties || []).includes(viewAs)))
+                .slice().sort((a, b) => startOf(a) - startOf(b));
+              const shown = moments.slice(0, 4); const more = moments.length - shown.length;
+              return (
+                <div className={"row" + sel + first} key={s.id}>
+                  {when}
+                  <div className="lane"><span className={nodeCls}></span></div>
+                  <div>
+                    <button type="button" className="card" onClick={() => onSelect(s.id)}>
+                      <div className="card-top">
+                        <div>
+                          <h3>{title}</h3>
+                          {s.label && place ? <div className="where">{ICONS.pin}<span>{place.name}{untilTxt ? <span className="until-inline">{" · " + untilTxt}</span> : null}</span></div>
+                            : (untilTxt ? <div className="where until-only">{untilTxt}</div> : null)}
+                        </div>
+                        {s.status !== "confirmed" ? <span className={"badge s-" + s.status}>{statusText(s.status, viewer)}</span> : null}
+                      </div>
+                      {whoText(s).length ? <div className="wholine">{whoText(s).map(p => <span key={p.id}><i className="pdot" style={{ background: p.color }}></i>{p.name}</span>)}</div> : null}
+                      {shown.length ? (
+                        <ul className="moments">
+                          {shown.map(m => { const mr = resolved[m.id] || {}; return <li key={m.id}><span className="mt">{mr.start != null ? fmtTime(mr.start) : "–"}</span><span>{m.name || "Untitled moment"}</span></li>; })}
+                          {more > 0 ? <li className="more">{"+ " + more + " more"}</li> : null}
+                        </ul>
+                      ) : null}
+                      {!viewer && w.length ? <div className="flag">{"▲ " + w[0]}{w.length > 1 ? " (+" + (w.length - 1) + " more)" : ""}</div> : null}
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </section>
+        );
+      })}
+    </div>
+  );
+}
+
+/* ================= Summary rail ================= */
+function SummaryRail({ viewer, needList, warnList, counts, total, glance, onSelect }) {
+  const pc = n => (total ? (n / total * 100) : 0) + "%";
+  const glanceCard = (
+    <div className="rcard glance-card"><h3>The day</h3>
+      <dl className="glance">
+        <dt>Begins</dt><dd>{glance.first ? glance.first : "not set"}</dd>
+        <dt>Ends</dt><dd>{glance.last ? glance.last : "not set"}</dd>
+        <dt>Length</dt><dd>{glance.span}</dd>
+      </dl>
+    </div>
+  );
+  if (viewer) {
+    return (
+      <React.Fragment>
+        {glanceCard}
+        <div className="rcard"><h3>Good to know</h3><p className="fine" style={{ margin: 0 }}>Times marked <b>To be confirmed</b> may still shift a little. Nicole and Michael will keep this page up to date.</p></div>
+      </React.Fragment>
+    );
+  }
+  return (
+    <React.Fragment>
+      <div className="rcard"><h3>Still to book <span className="count">{needList.length}</span></h3>
+        {needList.length ? (
+          <ul className="rlist">{needList.map(n => (
+            <li key={n.id}><button type="button" className="rbtn" onClick={() => onSelect(n.id)}><span className="rt">{n.title}<span className="rs">{n.sub}</span></span>{ICONS.chev}</button></li>
+          ))}</ul>
+        ) : <p className="fine" style={{ margin: 0 }}>Everything is booked. Lovely.</p>}
+      </div>
+      {warnList.length ? (
+        <div className="rcard rcard-warn"><h3>Worth a look <span className="count warn">{warnList.length}</span></h3>
+          <ul className="rlist">{warnList.map(n => (
+            <li key={n.id}><button type="button" className="rbtn" onClick={() => onSelect(n.id)}><span className="rt warn-li"><b>{n.title}</b><br />{n.msg}</span>{ICONS.chev}</button></li>
+          ))}</ul>
+        </div>
+      ) : null}
+      <div className="rcard"><h3>Planning progress</h3>
+        <div className="fine"><b className="prog-n">{counts.confirmed}</b> of {total} details confirmed</div>
+        <div className="bar" role="img" aria-label={counts.confirmed + " confirmed, " + counts.provisional + " tentative, " + counts.unbooked + " still to book"}>
+          <span style={{ width: pc(counts.confirmed), background: "var(--steel)" }}></span>
+          <span style={{ width: pc(counts.provisional), background: "var(--light-blue)" }}></span>
+          <span style={{ width: pc(counts.unbooked), background: "var(--lime)" }}></span>
+        </div>
+        <div className="key"><span><i className="kdot k-c"></i>{counts.confirmed} confirmed</span><span><i className="kdot k-t"></i>{counts.provisional} tentative</span><span><i className="kdot k-u"></i>{counts.unbooked} to book</span></div>
+      </div>
+      {glanceCard}
+    </React.Fragment>
+  );
+}
+
+/* ================= Detail panel: drawer on desktop, bottom sheet on phones ================= */
+const ST_OPTIONS = [["confirmed", "Confirmed"], ["provisional", "Tentative"], ["unbooked", "Still to book"]];
+function StatusSeg({ value, onChange }) {
+  return (
+    <div className="stseg" role="group" aria-label="Status">
+      {ST_OPTIONS.map(([v, label]) => (
+        <button key={v} type="button" className={v === "unbooked" ? "u" : ""} aria-pressed={value === v} onClick={() => onChange(v)}>{label}</button>
+      ))}
+    </div>
+  );
+}
+function PartyChips({ options, selected, onToggle }) {
+  return (
+    <div className="pchips">
+      {options.map(p => { const on = (selected || []).includes(p.id); return (
+        <button key={p.id} type="button" className={"pchip" + (on ? " on" : "")} aria-pressed={on} style={on ? { background: p.color } : {}} onClick={() => onToggle(p.id)}>
+          <span className="dot" style={{ background: on ? "#fff" : p.color }}></span>{p.name}
+        </button>); })}
+    </div>
+  );
+}
+function Psec({ title, className, note, children }) {
+  return <section className={"psec" + (className ? " " + className : "")}>{title ? <h4>{title}</h4> : null}{note ? <p className="lockline">{note}</p> : null}{children}</section>;
+}
+function PanelShell({ badge, title, sub, onClose, footer, label, children }) {
+  const closeRef = useRef(null);
+  useEffect(() => {
+    const prev = document.activeElement; const prevOverflow = document.body.style.overflow;
+    if (closeRef.current) closeRef.current.focus({ preventScroll: true });
+    document.body.style.overflow = "hidden";
+    const onKey = e => { if (e.key === "Escape") onClose(); };
+    window.addEventListener("keydown", onKey);
+    return () => { window.removeEventListener("keydown", onKey); document.body.style.overflow = prevOverflow; if (prev && prev.focus) prev.focus({ preventScroll: true }); };
+  }, []);
+  return (
+    <React.Fragment>
+      <div className="dscrim" onClick={onClose}></div>
+      <aside className="dpanel" role="dialog" aria-modal="true" aria-label={label}>
+        <div className="grab"></div>
+        <div className="panel-head">
+          <div>{badge}<h2>{title}</h2><p className="panel-sub">{sub}</p></div>
+          <button type="button" className="x" ref={closeRef} onClick={onClose} aria-label="Close details">{ICONS.x}</button>
+        </div>
+        <div className="panel-body">{children}</div>
+        <div className="panel-foot">{footer}</div>
+      </aside>
+    </React.Fragment>
+  );
+}
+
+function DetailPanel({ kind, row, events, subEvents, parties, places, resolved, warnings, editable, onUpdate, onDuplicate, onDelete, onClose, onAddSubEvent, onSelect, onUpdatePlace, onUpdateParty }) {
   if (!row) return null;
   const r = resolved[row.id] || {};
+  const isEvent = kind === "event";
+  const host = isEvent ? null : (events.find(s => s.id === row.event) || null);
+  const hostRes = host ? (resolved[host.id] || {}) : {};
+  const title = isEvent ? cardTitle(row, places) : (row.name || "Untitled moment");
+  const range = r.start != null ? fmtTime(r.start) + (r.end != null && row.duration > 0 ? " – " + fmtTime(r.end) : "") + (row.duration > 0 ? " · " + fmtDur(row.duration) : "") : "Time not set yet";
+  const badge = <span className={"badge s-" + row.status}>{statusText(row.status, !editable)}</span>;
+  const placeOf = isEvent ? row : host;
+  const locPlace = placeOf && placeOf.location ? places.find(p => p.id === placeOf.location) : null;
+  const kids = isEvent ? subEvents.filter(m => m.event === row.id).slice().sort((a, b) => { const ra = resolved[a.id] || {}, rb = resolved[b.id] || {}; return (ra.start == null ? 1e9 : ra.start) - (rb.start == null ? 1e9 : rb.start); }) : [];
+  const partyOptions = isEvent ? parties : (host ? parties.filter(p => (host.parties || []).includes(p.id)) : parties);
+  const toggleParty = pid => { const has = (row.parties || []).includes(pid); onUpdate({ parties: has ? row.parties.filter(p => p !== pid) : [...(row.parties || []), pid] }); };
+  const partyObjs = (row.parties || []).map(pid => parties.find(p => p.id === pid)).filter(Boolean);
+  const fromEv = isEvent && row.type === "travel" && row.follows ? events.find(s => s.id === row.follows) : null;
+  const fromPlace = fromEv && fromEv.location ? places.find(p => p.id === fromEv.location) : null;
 
-  if (kind === "event") {
-    const event = row;
-    const locPlace = event.location ? places.find(p => p.id === event.location) : null;
-    const kids = subEvents.filter(m => m.event === event.id).slice().sort((a, b) => { const ra = resolved[a.id] || {}, rb = resolved[b.id] || {}; return (ra.start == null ? 1e9 : ra.start) - (rb.start == null ? 1e9 : rb.start); });
-    const toggleParty = pid => { const has = (event.parties || []).includes(pid); onUpdate({ parties: has ? event.parties.filter(p => p !== pid) : [...(event.parties || []), pid] }); };
+  /* ---------- read-only view for guests and the bridal party ---------- */
+  if (!editable) {
     return (
-      <aside className="inspector" role="complementary" aria-label="Event details">
-        <div className="insp-head">
-          <h3>{editable ? "Event details" : "Event details (view only)"}</h3>
-          <button className="icon-btn" title="Close" onClick={onClose}>{"✕"}</button>
-        </div>
-        <div className="insp-body">
-          <fieldset className="insp-scope" disabled={!editable}>
-          <p className="ct-hint">An event is one group, at one place, for a stretch of time. It is the line on the map.</p>
-          <label className="fld"><span>Label</span>
-            <input className="cell-input bx" value={event.label} placeholder={eventName({ ...event, label: "" }, places)} onChange={e => onUpdate({ label: e.target.value })} />
-          </label>
-          <div className="fld2">
-            <label className="fld"><span>Type</span>
-              <select className="cell-select bx" value={event.type} onChange={e => onUpdate({ type: e.target.value })}>
-                <option value="event">event</option><option value="travel">travel</option>
-              </select>
-            </label>
-            <label className="fld"><span>Status</span>
-              <select className={"cell-select bx status-sel st-" + event.status} value={event.status} onChange={e => onUpdate({ status: e.target.value })}>
-                <option value="confirmed">confirmed</option><option value="provisional">provisional</option><option value="unbooked">unbooked</option>
-              </select>
-            </label>
-          </div>
-          <div className="fld"><span>Who is here</span>
-            <div className="parties-cell insp-parties">
-              {parties.map(p => { const on = (event.parties || []).includes(p.id); return (
-                <span key={p.id} className={"pchip" + (on ? " on" : "")} style={on ? { background: p.color } : {}} onClick={() => editable && toggleParty(p.id)} title={p.name}>
-                  <span className="dot" style={{ background: on ? "#fff" : p.color }}></span>{p.name}
-                </span>); })}
-            </div>
-          </div>
-          <div className="fld"><span>{event.type === "travel" ? "Arrives at" : "Place"}</span>
-            <select className="cell-select bx" value={event.location || ""} onChange={e => onUpdate({ location: e.target.value || null })}>
-              <option value="">(none)</option>
-              {places.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
-            </select>
-          </div>
-          <div className="fld"><span>Starts after</span>
-            <div className="after-row">
-              <select className="cell-select bx" value={event.follows || ""} onChange={e => onUpdate({ follows: e.target.value || null })}>
-                <option value="">nothing, use a set start time</option>
-                {events.filter(o => o.id !== event.id).map(o => <option key={o.id} value={o.id}>{eventName(o, places)}</option>)}
-              </select>
-              {event.follows ? (
-                <span className="after-gap"><span className="plus">+</span>
-                  <input className="cell-input bx" type="number" style={{ width: "62px" }} value={event.gap == null ? "" : event.gap} placeholder="0"
-                    onChange={e => { const v = e.target.value; onUpdate({ gap: v === "" ? null : parseInt(v, 10) || 0 }); }} />
-                  <span className="mins">min after it ends</span></span>
-              ) : null}
-            </div>
-          </div>
-          <div className="fld2">
-            <label className="fld"><span>Start</span>
-              <input className="cell-input bx time" key={event.id + "_" + (event.start == null ? "n" : event.start)} defaultValue={fmtTime(event.start)} placeholder={event.follows ? "auto" : "9:00 am"}
-                onBlur={e => { const v = parseTime(e.target.value); if (v === undefined) { e.target.value = fmtTime(event.start); return; } onUpdate({ start: v }); }}
-                onKeyDown={e => { if (e.key === "Enter") e.target.blur(); }} />
-            </label>
-            <label className="fld"><span>Duration (min)</span>
-              <input className="cell-input bx dur" type="number" min="0" value={event.duration == null ? "" : event.duration}
-                onChange={e => { const v = e.target.value; onUpdate({ duration: v === "" ? 0 : Math.max(0, parseInt(v, 10) || 0) }); }} />
-            </label>
-          </div>
-          <div className="fld"><span>End</span><div className="insp-end">{r.end == null ? "not set" : fmtTime(r.end)} <em>computed</em></div></div>
-          <label className="fld"><span>Notes</span>
-            <textarea className="cell-input bx insp-notes" value={event.notes} onChange={e => onUpdate({ notes: e.target.value })} />
-          </label>
-          <div className="fld2">
-            <label className="fld"><span>Owner</span>
-              <input className="cell-input bx" value={event.owner || ""} placeholder="who runs this" onChange={e => onUpdate({ owner: e.target.value })} />
-            </label>
-            <label className="fld"><span>Buffer (min)</span>
-              <input className="cell-input bx" type="number" min="0" value={event.buffer == null ? "" : event.buffer} placeholder="padding" onChange={e => { const v = e.target.value; onUpdate({ buffer: v === "" ? null : Math.max(0, parseInt(v, 10) || 0) }); }} />
-            </label>
-          </div>
-          <VendorBlock row={event} onUpdate={onUpdate} />
-          <CallTimes row={event} parties={parties} onUpdate={onUpdate} />
-          {locPlace ? (
-            <div className="fld"><span>Place details</span>
-              <div className="loc-details">
-                <div className="loc-name">{locPlace.name}</div>
-                <input className="cell-input bx" placeholder="address" value={locPlace.address || ""} onChange={e => onUpdatePlace(locPlace.id, { address: e.target.value })} />
-                <input className="cell-input bx" placeholder="site contact" value={locPlace.contact || ""} onChange={e => onUpdatePlace(locPlace.id, { contact: e.target.value })} />
-              </div>
-            </div>
-          ) : null}
-          <details className="party-defaults">
-            <summary>Party default call times</summary>
-            <div className="pd-list">
-              {parties.map(p => (
-                <div className="ct-row" key={p.id}>
-                  <span className="ct-name"><span className="ct-dot" style={{ background: p.color }}></span>{p.name}</span>
-                  <input className="cell-input bx time" style={{ width: "96px" }} key={p.id + "_" + (p.callTime == null ? "n" : p.callTime)} defaultValue={p.callTime == null ? "" : fmtTime(p.callTime)} placeholder="default"
-                    onBlur={e => { const v = parseTime(e.target.value); if (v === undefined) { e.target.value = p.callTime == null ? "" : fmtTime(p.callTime); return; } onUpdateParty(p.id, { callTime: v }); }}
-                    onKeyDown={e => { if (e.key === "Enter") e.target.blur(); }} />
-                </div>
-              ))}
-            </div>
-          </details>
-          </fieldset>
-
-          {warnings && warnings.length > 0 ? (
-            <div className="insp-warn"><h4>Warnings</h4><ul>{warnings.map((w, i) => <li key={i}>{w}</li>)}</ul></div>
-          ) : (<div className="insp-ok">{"✓"} No warnings for this event.</div>)}
-
-          <div className="insp-subs">
-            <div className="insp-subs-head">
-              <span>Sub events on this line {kids.length ? "(" + kids.length + ")" : ""}</span>
-              {editable ? <button className="btn subtle sm" onClick={() => onAddSubEvent(event.id, null)}>Add sub event</button> : null}
-            </div>
-            {kids.length ? (
-              <ul className="sub-list">
-                {kids.map(c => { const cr = resolved[c.id] || {}; return (
-                  <li key={c.id}>
-                    <button className="sub-item" onClick={() => onSelect(c.id)}>
-                      <span className={"sub-kind " + (c.pinned ? "phase" : "moment")}>{c.pinned ? "pinned" : "floats"}</span>
-                      <span className="sub-name">{c.name || "unnamed"}</span>
-                      <span className="sub-time">{cr.start != null ? fmtTime(cr.start) : ""}{c.duration > 0 && cr.end != null ? " to " + fmtTime(cr.end) : ""}</span>
-                    </button>
-                  </li>); })}
-              </ul>
-            ) : (<p className="sub-empty">{editable ? "Nothing scheduled inside this event yet. Add sub events as you learn them, or click this line on the map at the time it happens." : "Nothing scheduled inside this event."}</p>)}
-          </div>
-
-          {editable ? (
-            <div className="insp-actions">
-              <button className="btn" onClick={onDuplicate}>Duplicate</button>
-              <button className="btn danger-btn" onClick={onDelete}>Delete</button>
-            </div>
-          ) : null}
-        </div>
-      </aside>
+      <PanelShell badge={badge} title={title} sub={range} onClose={onClose} label={title + " details"}
+        footer={<React.Fragment><span className="spacer"></span><button type="button" className="btn" onClick={onClose}>Close</button></React.Fragment>}>
+        {locPlace || fromPlace ? (
+          <Psec title="Where">
+            <p className="rowline">{ICONS.pin}<span>{fromPlace && locPlace ? fromPlace.name + " to " + locPlace.name : locPlace.name}</span></p>
+            {locPlace && locPlace.address ? <p className="fine" style={{ margin: 0 }}>{locPlace.address}</p> : null}
+          </Psec>
+        ) : null}
+        {!isEvent && host ? <Psec title="During"><button type="button" className="link-btn" onClick={() => onSelect(host.id)}>{cardTitle(host, places)}</button></Psec> : null}
+        {partyObjs.length ? <Psec title="Who"><ul className="plist">{partyObjs.map(p => <li key={p.id}><i className="pdot" style={{ background: p.color }}></i>{p.name}</li>)}</ul></Psec> : null}
+        {kids.length ? (
+          <Psec title="Moments"><ul className="mlist">{kids.map(c => { const cr = resolved[c.id] || {}; return <li key={c.id}><span className="mt">{cr.start != null ? fmtTime(cr.start) : "–"}</span><span className="mn">{c.name || "Untitled moment"}</span></li>; })}</ul></Psec>
+        ) : null}
+        {row.publicNotes ? <Psec title="Notes"><p style={{ margin: 0, whiteSpace: "pre-wrap" }}>{row.publicNotes}</p></Psec> : null}
+        {row.status !== "confirmed" ? <Psec><p className="fine" style={{ margin: 0 }}>This time is still to be confirmed and may shift a little.</p></Psec> : null}
+      </PanelShell>
     );
   }
 
-  // sub event
-  const mo = row;
-  const host = events.find(s => s.id === mo.event) || null;
-  const hostRes = host ? (resolved[host.id] || {}) : {};
-  const toggleParty = pid => { const has = (mo.parties || []).includes(pid); onUpdate({ parties: has ? mo.parties.filter(p => p !== pid) : [...(mo.parties || []), pid] }); };
-  const setStartFromInput = v => { if (mo.pinned) onUpdate({ start: v }); else if (hostRes.start != null && v != null) onUpdate({ offset: v - hostRes.start }); };
-  return (
-    <aside className="inspector" role="complementary" aria-label="Sub event details">
-      <div className="insp-head">
-        <h3>{editable ? "Sub event details" : "Sub event details (view only)"}</h3>
-        <button className="icon-btn" title="Close" onClick={onClose}>{"✕"}</button>
-      </div>
-      <div className="insp-body">
-        <div className="insp-parent">
-          <span>On the line</span>
-          {host ? <button className="link-btn" onClick={() => onSelect(host.id)}>{eventName(host, places)}</button> : <em>no event</em>}
+  const footer = (
+    <React.Fragment>
+      <button type="button" className="btn" onClick={onDuplicate}>Duplicate</button>
+      <button type="button" className="btn danger-btn" onClick={onDelete}>Delete</button>
+      <span className="spacer"></span>
+      <button type="button" className="btn primary" onClick={onClose}>Done</button>
+    </React.Fragment>
+  );
+  const warnBlock = warnings && warnings.length > 0
+    ? <div className="insp-warn"><h4>Worth a look</h4><ul>{warnings.map((w, i) => <li key={i}>{w}</li>)}</ul></div>
+    : null;
+
+  /* ---------- private planning details, editors only ---------- */
+  const privateBlock = (
+    <Psec className="private" title={<React.Fragment>{ICONS.lock}Only you two can see this</React.Fragment>} note="Hidden from guests and the bridal party.">
+      <label className="fld"><span>Private notes</span>
+        <textarea className="cell-input bx insp-notes" value={row.notes} placeholder="Reminders, to-dos, anything just for you" onChange={e => onUpdate({ notes: e.target.value })} />
+      </label>
+      <label className="fld"><span>Who is handling this</span>
+        <input className="cell-input bx" value={row.owner || ""} placeholder="Nicole, Michael, or a helper" onChange={e => onUpdate({ owner: e.target.value })} />
+      </label>
+      <VendorBlock row={row} onUpdate={onUpdate} />
+      <CallTimes row={row} parties={parties} onUpdate={onUpdate} />
+      {locPlace ? (
+        <div className="fld"><span>Site contact at {locPlace.name}</span>
+          <input className="cell-input bx" placeholder="Name and phone" value={locPlace.contact || ""} onChange={e => onUpdatePlace(locPlace.id, { contact: e.target.value })} />
         </div>
-        <fieldset className="insp-scope" disabled={!editable}>
-        <label className="fld"><span>What happens</span>
-          <input className="cell-input bx" value={mo.name} placeholder="bride hair done, dinner served" onChange={e => onUpdate({ name: e.target.value })} />
-        </label>
-        <div className="fld"><span>On event</span>
-          <select className="cell-select bx" value={mo.event || ""} onChange={e => onUpdate({ event: e.target.value || null })}>
-            <option value="">(none)</option>
-            {events.map(s => <option key={s.id} value={s.id}>{eventName(s, places) + " " + fmtTime((resolved[s.id] || {}).start)}</option>)}
-          </select>
+      ) : null}
+      <details className="party-defaults">
+        <summary>Default call time for each group</summary>
+        <div className="pd-list">
+          {parties.map(p => (
+            <div className="ct-row" key={p.id}>
+              <span className="ct-name"><span className="ct-dot" style={{ background: p.color }}></span>{p.name}</span>
+              <input className="cell-input bx time" style={{ width: "104px" }} key={p.id + "_" + (p.callTime == null ? "n" : p.callTime)} defaultValue={p.callTime == null ? "" : fmtTime(p.callTime)} placeholder="default"
+                onBlur={e => { const v = parseTime(e.target.value); if (v === undefined) { e.target.value = p.callTime == null ? "" : fmtTime(p.callTime); return; } onUpdateParty(p.id, { callTime: v }); }}
+                onKeyDown={e => { if (e.key === "Enter") e.target.blur(); }} />
+            </div>
+          ))}
         </div>
-        <div className="fld"><span>Who</span>
-          <div className="parties-cell insp-parties">
-            {(host ? parties.filter(p => (host.parties || []).includes(p.id)) : parties).map(p => { const on = (mo.parties || []).includes(p.id); return (
-              <span key={p.id} className={"pchip" + (on ? " on" : "")} style={on ? { background: p.color } : {}} onClick={() => editable && toggleParty(p.id)} title={p.name}>
-                <span className="dot" style={{ background: on ? "#fff" : p.color }}></span>{p.name}
-              </span>); })}
+      </details>
+    </Psec>
+  );
+  const publicNotes = (
+    <Psec title="Notes everyone can see">
+      <div className="fld"><textarea className="cell-input bx insp-notes" value={row.publicNotes || ""} placeholder="Anything guests or the bridal party should know" onChange={e => onUpdate({ publicNotes: e.target.value })} /></div>
+    </Psec>
+  );
+
+  /* ---------- editor: event ---------- */
+  if (isEvent) {
+    return (
+      <PanelShell badge={badge} title={title} sub={range} onClose={onClose} footer={footer} label={title + " details"}>
+        <Psec title="Status"><StatusSeg value={row.status} onChange={v => onUpdate({ status: v })} /></Psec>
+        {warnBlock ? <Psec>{warnBlock}</Psec> : null}
+        <Psec title="When">
+          <label className="fld"><span>Name</span>
+            <input className="cell-input bx" value={row.label} placeholder={eventName({ ...row, label: "" }, places)} onChange={e => onUpdate({ label: e.target.value })} />
+          </label>
+          <div className="fld2">
+            <label className="fld"><span>Kind</span>
+              <select className="cell-select bx" value={row.type} onChange={e => onUpdate({ type: e.target.value })}>
+                <option value="event">Event</option><option value="travel">Travel</option>
+              </select>
+            </label>
+            <label className="fld"><span>How long (min)</span>
+              <input className="cell-input bx dur" type="number" min="0" value={row.duration == null ? "" : row.duration}
+                onChange={e => { const v = e.target.value; onUpdate({ duration: v === "" ? 0 : Math.max(0, parseInt(v, 10) || 0) }); }} />
+            </label>
           </div>
-        </div>
-        <div className="fld"><span>Time behaviour</span>
-          <div className="after-row">
-            <select className="cell-select bx" value={mo.pinned ? "pinned" : "float"}
-              onChange={e => { const pin = e.target.value === "pinned";
-                if (pin) onUpdate({ pinned: true, start: r.start != null ? r.start : (hostRes.start != null ? hostRes.start + (mo.offset || 0) : null) });
-                else onUpdate({ pinned: false, offset: (r.start != null && hostRes.start != null) ? r.start - hostRes.start : 0, start: null }); }}>
-              <option value="float">floats, rides along when the event moves</option>
-              <option value="pinned">pinned, holds this clock time</option>
+          <div className="fld2">
+            <label className="fld"><span>Start time</span>
+              <input className="cell-input bx time" key={row.id + "_" + (row.start == null ? "n" : row.start)} defaultValue={fmtTime(row.start)} placeholder={row.follows ? "automatic" : "9:00 am"}
+                onBlur={e => { const v = parseTime(e.target.value); if (v === undefined) { e.target.value = fmtTime(row.start); return; } onUpdate({ start: v }); }}
+                onKeyDown={e => { if (e.key === "Enter") e.target.blur(); }} />
+            </label>
+            <div className="fld"><span>Ends</span><div className="insp-end">{r.end == null ? "not set" : fmtTime(r.end)}</div></div>
+          </div>
+          <div className="fld"><span>Starts right after</span>
+            <div className="after-row">
+              <select className="cell-select bx" value={row.follows || ""} onChange={e => onUpdate({ follows: e.target.value || null })}>
+                <option value="">Nothing, use the start time</option>
+                {events.filter(o => o.id !== row.id).map(o => <option key={o.id} value={o.id}>{cardTitle(o, places) + (((resolved[o.id] || {}).start != null) ? ", " + fmtTime((resolved[o.id] || {}).start) : "")}</option>)}
+              </select>
+              {row.follows ? (
+                <span className="after-gap"><span className="plus">+</span>
+                  <input className="cell-input bx" type="number" style={{ width: "66px" }} value={row.gap == null ? "" : row.gap} placeholder="0"
+                    onChange={e => { const v = e.target.value; onUpdate({ gap: v === "" ? null : parseInt(v, 10) || 0 }); }} />
+                  <span className="mins">min later</span></span>
+              ) : null}
+            </div>
+          </div>
+          <p className="ct-hint">A start time you type holds that exact time. Clear it and this event starts right after the one above.</p>
+          <label className="fld"><span>Buffer after (min)</span>
+            <input className="cell-input bx" type="number" min="0" value={row.buffer == null ? "" : row.buffer} placeholder="extra padding" onChange={e => { const v = e.target.value; onUpdate({ buffer: v === "" ? null : Math.max(0, parseInt(v, 10) || 0) }); }} />
+          </label>
+        </Psec>
+        <Psec title="Where">
+          <label className="fld"><span>{row.type === "travel" ? "Going to" : "Place"}</span>
+            <select className="cell-select bx" value={row.location || ""} onChange={e => onUpdate({ location: e.target.value || null })}>
+              <option value="">(none)</option>
+              {places.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
             </select>
-          </div>
-          <p className="ct-hint">{mo.pinned ? "Dinner at 7:00 no matter what." : "Keeps its gap from the start of the event, currently " + (mo.offset || 0) + " min in."}</p>
+          </label>
+          {locPlace ? (
+            <label className="fld"><span>Address</span>
+              <input className="cell-input bx" placeholder="Street address" value={locPlace.address || ""} onChange={e => onUpdatePlace(locPlace.id, { address: e.target.value })} />
+            </label>
+          ) : null}
+        </Psec>
+        <Psec title="Who is here"><PartyChips options={parties} selected={row.parties} onToggle={toggleParty} />
+          {!parties.length ? <p className="ct-hint">No groups yet. Add some under Groups and places.</p> : null}
+        </Psec>
+        {row.type !== "travel" ? (
+          <Psec title={"Moments" + (kids.length ? " (" + kids.length + ")" : "")}>
+            {kids.length ? (
+              <ul className="sub-list" style={{ marginBottom: 10 }}>
+                {kids.map(c => { const cr = resolved[c.id] || {}; return (
+                  <li key={c.id}>
+                    <button type="button" className="sub-item" onClick={() => onSelect(c.id)}>
+                      <span className="sub-time">{cr.start != null ? fmtTime(cr.start) : "–"}</span>
+                      <span className="sub-name">{c.name || "Untitled moment"}</span>
+                      <span className={"sub-kind " + (c.pinned ? "phase" : "moment")}>{c.pinned ? "fixed time" : "follows event"}</span>
+                    </button>
+                  </li>); })}
+              </ul>
+            ) : <p className="sub-empty" style={{ marginBottom: 10 }}>Moments are the little times inside an event, like the first dance or when hair is done.</p>}
+            <button type="button" className="btn" onClick={() => onAddSubEvent(row.id, null)}>{ICONS.plus}Add a moment</button>
+          </Psec>
+        ) : null}
+        {publicNotes}
+        {privateBlock}
+      </PanelShell>
+    );
+  }
+
+  /* ---------- editor: moment (sub event) ---------- */
+  const setStartFromInput = v => { if (row.pinned) onUpdate({ start: v }); else if (hostRes.start != null && v != null) onUpdate({ offset: v - hostRes.start }); };
+  return (
+    <PanelShell badge={badge} title={title} sub={range} onClose={onClose} footer={footer} label={title + " details"}>
+      <Psec title="Status"><StatusSeg value={row.status} onChange={v => onUpdate({ status: v })} /></Psec>
+      {warnBlock ? <Psec>{warnBlock}</Psec> : null}
+      <Psec title="What and when">
+        <label className="fld"><span>What happens</span>
+          <input className="cell-input bx" value={row.name} placeholder="Bride hair done, dinner served" onChange={e => onUpdate({ name: e.target.value })} />
+        </label>
+        <label className="fld"><span>During this event</span>
+          <select className="cell-select bx" value={row.event || ""} onChange={e => onUpdate({ event: e.target.value || null })}>
+            <option value="">(none)</option>
+            {events.map(s => <option key={s.id} value={s.id}>{cardTitle(s, places) + (((resolved[s.id] || {}).start != null) ? ", " + fmtTime((resolved[s.id] || {}).start) : "")}</option>)}
+          </select>
+        </label>
+        {host ? <p className="ct-hint" style={{ marginTop: -6 }}><button type="button" className="link-btn" onClick={() => onSelect(host.id)}>Open {cardTitle(host, places)}</button></p> : null}
+        <div className="fld"><span>Time</span>
+          <select className="cell-select bx" value={row.pinned ? "pinned" : "float"}
+            onChange={e => { const pin = e.target.value === "pinned";
+              if (pin) onUpdate({ pinned: true, start: r.start != null ? r.start : (hostRes.start != null ? hostRes.start + (row.offset || 0) : null) });
+              else onUpdate({ pinned: false, offset: (r.start != null && hostRes.start != null) ? r.start - hostRes.start : 0, start: null }); }}>
+            <option value="float">Follows the event if it moves</option>
+            <option value="pinned">Fixed clock time</option>
+          </select>
+          <p className="ct-hint">{row.pinned ? "Stays at this clock time no matter what." : "Keeps its distance from the start of the event, currently " + (row.offset || 0) + " min in."}</p>
         </div>
         <div className="fld2">
-          <label className="fld"><span>Start</span>
-            <input className="cell-input bx time" key={mo.id + "_" + (r.start == null ? "n" : r.start)} defaultValue={fmtTime(r.start)} placeholder="9:00 am"
+          <label className="fld"><span>Start time</span>
+            <input className="cell-input bx time" key={row.id + "_" + (r.start == null ? "n" : r.start)} defaultValue={fmtTime(r.start)} placeholder="9:00 am"
               onBlur={e => { const v = parseTime(e.target.value); if (v === undefined || v === null) { e.target.value = fmtTime(r.start); return; } setStartFromInput(v); }}
               onKeyDown={e => { if (e.key === "Enter") e.target.blur(); }} />
           </label>
-          <label className="fld"><span>Duration (min)</span>
-            <input className="cell-input bx dur" type="number" min="0" value={mo.duration == null ? "" : mo.duration}
+          <label className="fld"><span>How long (min)</span>
+            <input className="cell-input bx dur" type="number" min="0" value={row.duration == null ? "" : row.duration}
               onChange={e => { const v = e.target.value; onUpdate({ duration: v === "" ? 0 : Math.max(0, parseInt(v, 10) || 0) }); }} />
           </label>
         </div>
-        <div className="fld"><span>End</span><div className="insp-end">{mo.duration > 0 ? (r.end == null ? "not set" : fmtTime(r.end)) : "a point in time"} <em>computed</em></div></div>
-        <label className="fld"><span>Status</span>
-          <select className={"cell-select bx status-sel st-" + mo.status} value={mo.status} onChange={e => onUpdate({ status: e.target.value })}>
-            <option value="confirmed">confirmed</option><option value="provisional">provisional</option><option value="unbooked">unbooked</option>
-          </select>
-        </label>
-        <label className="fld"><span>Notes</span>
-          <textarea className="cell-input bx insp-notes" value={mo.notes} onChange={e => onUpdate({ notes: e.target.value })} />
-        </label>
-        <label className="fld"><span>Owner</span>
-          <input className="cell-input bx" value={mo.owner || ""} placeholder="who runs this" onChange={e => onUpdate({ owner: e.target.value })} />
-        </label>
-        <VendorBlock row={mo} onUpdate={onUpdate} />
-        <CallTimes row={mo} parties={parties} onUpdate={onUpdate} />
-        </fieldset>
-
-        {warnings && warnings.length > 0 ? (
-          <div className="insp-warn"><h4>Warnings</h4><ul>{warnings.map((w, i) => <li key={i}>{w}</li>)}</ul></div>
-        ) : (<div className="insp-ok">{"✓"} No warnings for this sub event.</div>)}
-
-        {editable ? (
-          <div className="insp-actions">
-            <button className="btn" onClick={onDuplicate}>Duplicate</button>
-            <button className="btn danger-btn" onClick={onDelete}>Delete</button>
-          </div>
-        ) : null}
-      </div>
-    </aside>
+        <div className="fld"><span>Ends</span><div className="insp-end">{row.duration > 0 ? (r.end == null ? "not set" : fmtTime(r.end)) : "a single moment in time"}</div></div>
+      </Psec>
+      <Psec title="Who"><PartyChips options={partyOptions} selected={row.parties} onToggle={toggleParty} /></Psec>
+      {publicNotes}
+      {privateBlock}
+    </PanelShell>
   );
 }
-/* ================= App ================= */
+
 function App() {
   /* ----- auth + cloud state ----- */
   const [user, setUser] = useState(null);
@@ -1317,7 +1739,10 @@ function App() {
   const [places, setPlaces] = useState(LOCAL_MODE ? seeded.places : []);
   const [selId, setSelId] = useState(null);
   const [showManager, setShowManager] = useState(false);
-  const [view, setView] = useState("table");
+  const [view, setView] = useState("timeline");
+  const [viewAs, setViewAs] = useState(null);
+  const [railOpen, setRailOpen] = useState(false);
+  const [mapFs, setMapFs] = useState(false);
   const [collapseTrunk, setCollapseTrunk] = useState(false);
   const [showLabels, setShowLabels] = useState(true);
   const [filter, setFilter] = useState("all");
@@ -1478,7 +1903,7 @@ function App() {
     const kids = subEvents.filter(m => m.event === id);
     const followers = events.filter(x => x.follows === id);
     const lines = [];
-    if (kids.length) lines.push(kids.length + (kids.length > 1 ? " sub events on this line will also be deleted: " : " sub event on this line will also be deleted: ") + kids.map(m => m.name || "unnamed").join(", ") + ".");
+    if (kids.length) lines.push(kids.length + (kids.length > 1 ? " moments during this event will also be deleted: " : " moment during this event will also be deleted: ") + kids.map(m => m.name || "unnamed").join(", ") + ".");
     if (followers.length) lines.push(followers.length + (followers.length > 1 ? " events that start after it will lose that link: " : " event that starts after it will lose that link: ") + followers.map(x => eventName(x, places)).join(", ") + ".");
     if (lines.length) setConfirm({ title: "Delete " + eventName(s, places) + "?", lines, confirmLabel: "Delete", onConfirm: () => { deleteEvent(id); setConfirm(null); } });
     else deleteEvent(id);
@@ -1490,7 +1915,7 @@ function App() {
     const aSubEvents = subEvents.filter(m => (m.parties || []).includes(id) || (m.callTimes && m.callTimes[id] != null));
     const n = aEvents.length + aSubEvents.length;
     if (n) {
-      setConfirm({ title: "Remove party " + p.name + "?", lines: ["It will be taken off " + n + (n > 1 ? " rows" : " row") + " and any call times set for it there will be cleared: " + [...aEvents.map(s => eventName(s, places)), ...aSubEvents.map(m => m.name || "unnamed sub event")].join(", ") + "."], confirmLabel: "Remove", onConfirm: () => { removeParty(id); setConfirm(null); } });
+      setConfirm({ title: "Remove group " + p.name + "?", lines: ["It will be taken off " + n + (n > 1 ? " rows" : " row") + " and any call times set for it there will be cleared: " + [...aEvents.map(s => eventName(s, places)), ...aSubEvents.map(m => m.name || "unnamed moment")].join(", ") + "."], confirmLabel: "Remove", onConfirm: () => { removeParty(id); setConfirm(null); } });
     } else removeParty(id);
   }
   function requestRemovePlace(id) {
@@ -1498,12 +1923,12 @@ function App() {
     const p = places.find(x => x.id === id); if (!p) return;
     const usedBy = events.filter(s => s.location === id);
     if (usedBy.length) {
-      setConfirm({ title: "Remove place " + p.name + "?", lines: [usedBy.length + (usedBy.length > 1 ? " events" : " event") + " set here will lose their place, and the sub events on them lose it too: " + usedBy.map(s => eventName(s, places)).join(", ") + ".", "Its drive times to and from other places will also be removed."], confirmLabel: "Remove", onConfirm: () => { removePlace(id); setConfirm(null); } });
+      setConfirm({ title: "Remove place " + p.name + "?", lines: [usedBy.length + (usedBy.length > 1 ? " events" : " event") + " set here will lose their place, and the moments in them lose it too: " + usedBy.map(s => eventName(s, places)).join(", ") + ".", "Its drive times to and from other places will also be removed."], confirmLabel: "Remove", onConfirm: () => { removePlace(id); setConfirm(null); } });
     } else removePlace(id);
   }
   function clearTimeline() {
     if (!editable) return;
-    setConfirm({ title: "Clear the whole timeline?", lines: ["Every event and sub event will be removed. Your parties and places stay. You can undo this right after with undo."], confirmLabel: "Clear", onConfirm: () => { setEvents([]); setSubEvents([]); setSelId(null); setConfirm(null); } });
+    setConfirm({ title: "Clear the whole timeline?", lines: ["Every event and moment will be removed. Your groups and places stay. You can undo this right after with undo."], confirmLabel: "Clear", onConfirm: () => { setEvents([]); setSubEvents([]); setSelId(null); setConfirm(null); } });
   }
   function toggleEventParty(eventId, partyId) {
     if (!editable) return;
@@ -1519,7 +1944,7 @@ function App() {
 
   /* ----- parties ----- */
   const PALETTE = ["#5680A6","#5A7D4E","#A5546E","#7A6A9E","#4B5563","#3F7F7A","#9A6B2F","#3D6386"];
-  function addParty() { if (!editable) return; setParties(prev => [...prev, { id: newId("p"), name: "New party", color: PALETTE[prev.length % PALETTE.length], laneOrder: prev.length, callTime: null }]); }
+  function addParty() { if (!editable) return; setParties(prev => [...prev, { id: newId("p"), name: "New group", color: PALETTE[prev.length % PALETTE.length], laneOrder: prev.length, callTime: null }]); }
   function updateParty(id, patch) { if (!editable) return; setParties(prev => prev.map(p => (p.id === id ? { ...p, ...patch } : p))); }
   function removeParty(id) {
     setParties(prev => prev.filter(p => p.id !== id).sort((a, b) => a.laneOrder - b.laneOrder).map((p, i) => ({ ...p, laneOrder: i })));
@@ -1564,7 +1989,7 @@ function App() {
   const statPlaced = rows.filter(s => { const r = resolved[s.id]; return r && r.start != null && r.end != null; });
   let firstRow = null, lastRow = null;
   statPlaced.forEach(s => { const r = resolved[s.id]; if (!firstRow || r.start < resolved[firstRow.id].start) firstRow = s; if (!lastRow || r.end > resolved[lastRow.id].end) lastRow = s; });
-  const rowName = s => (s ? (s.event !== undefined ? (s.name || "unnamed sub event") : eventName(s, places)) : "");
+  const rowName = s => (s ? (s.event !== undefined ? (s.name || "unnamed moment") : eventName(s, places)) : "");
   const spanMin = (firstRow && lastRow) ? (resolved[lastRow.id].end - resolved[firstRow.id].start) : 0;
   const spanFmt = Math.floor(spanMin / 60) + "h " + (spanMin % 60) + "m";
   const statusCounts = { confirmed: 0, provisional: 0, unbooked: 0 };
@@ -1592,6 +2017,24 @@ function App() {
     if (rowsOut.length) sections.push({ label: sd.label, rows: rowsOut });
   });
 
+  const sortedParties = [...parties].sort((a, b) => a.laneOrder - b.laneOrder);
+  const viewAsParty = viewAs ? parties.find(p => p.id === viewAs) || null : null;
+  const timeEnds = s => { const r = resolved[s.id] || {}; return r.start != null ? fmtTime(r.start) : "time not set"; };
+  const rowTitle = s => (s.event !== undefined ? (s.name || "Untitled moment") : cardTitle(s, places));
+  const needList = [
+    ...events.filter(s => s.status === "unbooked").map(s => { const pl = places.find(x => x.id === s.location); return { id: s.id, title: cardTitle(s, places), sub: (s.label && pl ? pl.name + " · " : "") + timeEnds(s) }; }),
+    ...subEvents.filter(m => m.status === "unbooked").map(m => { const h = events.find(x => x.id === m.event); return { id: m.id, title: m.name || "Untitled moment", sub: (h ? "During " + cardTitle(h, places) + " · " : "") + timeEnds(m) }; }),
+  ];
+  const warnList = [];
+  events.forEach(s => { const w = warningsById[s.id]; if (w && w.length) warnList.push({ id: s.id, title: cardTitle(s, places), msg: w[0] }); });
+  subEvents.forEach(m => { const w = warningsById[m.id]; if (w && w.length) warnList.push({ id: m.id, title: m.name || "Untitled moment", msg: w[0] }); });
+  const glance = {
+    first: firstRow ? fmtTime(resolved[firstRow.id].start) + " · " + rowTitle(firstRow) : null,
+    last: lastRow ? fmtTime(resolved[lastRow.id].end) + " · " + rowTitle(lastRow) : null,
+    span: (firstRow && lastRow) ? (Math.floor(spanMin / 60) + " hr" + (spanMin % 60 ? " " + (spanMin % 60) + " min" : "")) : "not set",
+  };
+  const shownEventCount = events.filter(s => !viewAs || (s.parties || []).includes(viewAs)).length;
+
   /* ----- gate screens ----- */
   if (!authReady) return <div className="loading-screen">Loading&#8230;</div>;
   if (!LOCAL_MODE && loading) return <div className="loading-screen">Loading the timeline&#8230;</div>;
@@ -1599,7 +2042,7 @@ function App() {
   const saveText = saveStatus === "saving" ? "saving…" : saveStatus === "saved" ? "all changes saved" : saveStatus === "error" ? "save failed, check your connection" : "";
 
   return (
-    <div className={"app" + (selKind ? " with-inspector" : "")}>
+    <div className="app">
       <header className="topbar">
         <div className="authbar">
           {LOCAL_MODE ? <span className="who">local preview, not saved</span> : (
@@ -1630,6 +2073,7 @@ function App() {
       {!LOCAL_MODE && user && !isEditor ? <div className="banner">You are signed in as {user.email}, which can view but not edit this timeline. Sign in with an editor account to make changes.</div> : null}
       {!LOCAL_MODE && !user && docExists === false ? <div className="banner">This timeline has not been published yet. The couple will add it soon.</div> : null}
 
+      {editable && view !== "timeline" ? (
       <section className="overview">
         <div className="ov-stats">
           <div className="ov-stat"><span className="ov-k">First</span><span className="ov-v">{firstRow ? rowName(firstRow) + ", " + fmtTime(resolved[firstRow.id].start) : "nothing scheduled"}</span></div>
@@ -1638,64 +2082,59 @@ function App() {
           <div className="ov-stat"><span className="ov-k">Places</span><span className="ov-v mono">{places.length}</span></div>
         </div>
         <div className="ov-roll">
-          <div className="roll-bar" role="img" aria-label={"Statuses: " + statusCounts.confirmed + " confirmed, " + statusCounts.provisional + " provisional, " + statusCounts.unbooked + " unbooked"}>
+          <div className="roll-bar" role="img" aria-label={"Statuses: " + statusCounts.confirmed + " confirmed, " + statusCounts.provisional + " tentative, " + statusCounts.unbooked + " still to book"}>
             {statusCounts.confirmed > 0 ? <span className="seg-confirmed" style={{ width: pct(statusCounts.confirmed) + "%" }}></span> : null}
             {statusCounts.provisional > 0 ? <span className="seg-provisional" style={{ width: pct(statusCounts.provisional) + "%" }}></span> : null}
             {statusCounts.unbooked > 0 ? <span className="seg-unbooked" style={{ width: pct(statusCounts.unbooked) + "%" }}></span> : null}
           </div>
           <div className="roll-key">
             <span className="rk"><span className="rk-dot c"></span>{statusCounts.confirmed} confirmed</span>
-            <span className="rk"><span className="rk-dot p"></span>{statusCounts.provisional} provisional</span>
-            <span className="rk"><span className="rk-dot u"></span>{statusCounts.unbooked} unbooked</span>
+            <span className="rk"><span className="rk-dot p"></span>{statusCounts.provisional} tentative</span>
+            <span className="rk"><span className="rk-dot u"></span>{statusCounts.unbooked} still to book</span>
           </div>
         </div>
       </section>
+      ) : null}
 
-      <div className="viewbar">
-        <div className="seg">
-          <button className={"seg-btn" + (view === "table" ? " on" : "")} onClick={() => setView("table")}>Table</button>
-          <button className={"seg-btn" + (view === "map" ? " on" : "")} onClick={() => setView("map")}>Map</button>
+      <div className="toolbar">
+        <div className="tabs" role="group" aria-label="Choose a view">
+          <button type="button" className={"seg-btn" + (view === "timeline" ? " on" : "")} aria-pressed={view === "timeline"} onClick={() => setView("timeline")}>{ICONS.list}<span>Timeline</span></button>
+          <button type="button" className={"seg-btn" + (view === "map" ? " on" : "")} aria-pressed={view === "map"} onClick={() => setView("map")}>{ICONS.map}<span>Map</span></button>
+          <button type="button" className={"seg-btn" + (view === "table" ? " on" : "")} aria-pressed={view === "table"} onClick={() => setView("table")}>{ICONS.table}<span>Table</span></button>
         </div>
-        <div className="seg">
-          <button className={"seg-btn" + (filter === "all" ? " on" : "")} onClick={() => setFilter("all")}>All</button>
-          <button className={"seg-btn" + (filter === "unconfirmed" ? " on" : "")} onClick={() => setFilter("unconfirmed")}>Still to confirm</button>
-        </div>
-        {view === "map" ? (
-          <React.Fragment>
-            <label className="chk"><input type="checkbox" checked={showLabels} onChange={e => setShowLabels(e.target.checked)} /> Show labels</label>
-            <label className="chk"><input type="checkbox" checked={collapseTrunk} onChange={e => setCollapseTrunk(e.target.checked)} /> Collapse where all together</label>
-          </React.Fragment>
-        ) : null}
         <span className="spacer"></span>
-        {editable ? (
-          <React.Fragment>
-            <button className="btn subtle" onClick={undo} disabled={!canUndo} title="Undo (Ctrl or Cmd + Z)">Undo</button>
-            <button className="btn subtle" onClick={redo} disabled={!canRedo} title="Redo (Ctrl or Cmd + Shift + Z)">Redo</button>
-            <button className="btn subtle" onClick={downloadBackup} title="Download a JSON backup of the whole plan">Download backup</button>
-            <button className="btn subtle" onClick={downloadCsv} title="Download the rows as CSV for Excel">Export CSV</button>
-          </React.Fragment>
-        ) : null}
+        <div className="tb-actions">
+          {editable ? (
+            <React.Fragment>
+              <button className="btn subtle" onClick={undo} disabled={!canUndo} title="Undo (Ctrl or Cmd + Z)">Undo</button>
+              <button className="btn subtle" onClick={redo} disabled={!canRedo} title="Redo (Ctrl or Cmd + Shift + Z)">Redo</button>
+            </React.Fragment>
+          ) : null}
+          {view === "timeline" ? <button className="btn subtle print-btn" onClick={() => window.print()}>{ICONS.print}Print the schedule</button> : null}
+          {editable ? <button className="btn" onClick={() => setShowManager(v => !v)}>{showManager ? "Hide groups and places" : "Groups and places"}</button> : null}
+          {editable && view !== "map" ? <button className="btn primary add-btn" onClick={() => addEvent({})} aria-label="Add event">{ICONS.plus}<span>Add event</span></button> : null}
+        </div>
       </div>
 
-      {view === "map" ? (
-        <MapView events={events} subEvents={subEvents} parties={parties} places={places} resolved={resolved} selId={selId} setSelId={setSelId}
-          collapse={collapseTrunk} showLabels={showLabels} onMovePlaceTo={movePlaceTo} onAddEvent={addEvent} onAddSubEvent={addSubEvent} filter={filter} editable={editable} />
-      ) : (
-      <fieldset className="edit-scope" disabled={!editable}>
-      {editable ? (
-        <div className="toolbar">
-          <button className="btn primary" onClick={() => addEvent({})}>Add event</button>
-          <button className="btn" onClick={() => { const t = [...events].sort(byStart)[0]; if (t) addSubEvent(t.id, null); }} disabled={!events.length}>Add sub event</button>
-          <button className="btn" onClick={() => setShowManager(v => !v)}>{showManager ? "Hide lists" : "Manage parties and places"}</button>
-          <span className="spacer"></span>
-          <button className="btn subtle" onClick={clearTimeline} title="Remove all events and sub events to start a real plan">Clear timeline</button>
+      {view === "map" || view === "table" ? (
+        <div className="viewopts">
+          <div className="seg">
+            <button className={"seg-btn" + (filter === "all" ? " on" : "")} onClick={() => setFilter("all")}>Everything</button>
+            <button className={"seg-btn" + (filter === "unconfirmed" ? " on" : "")} onClick={() => setFilter("unconfirmed")}>Still to confirm</button>
+          </div>
+          {view === "map" ? (
+            <React.Fragment>
+              <label className="chk"><input type="checkbox" checked={showLabels} onChange={e => setShowLabels(e.target.checked)} /> Show labels</label>
+              <label className="chk"><input type="checkbox" checked={collapseTrunk} onChange={e => setCollapseTrunk(e.target.checked)} /> Collapse where all together</label>
+            </React.Fragment>
+          ) : null}
         </div>
       ) : null}
 
       {editable && showManager ? (
         <div className="manager">
           <div className="mgr-card">
-            <div className="mgr-head"><h3>Parties</h3><button className="btn" onClick={addParty}>Add party</button></div>
+            <div className="mgr-head"><h3>Groups</h3><button className="btn" onClick={addParty}>Add group</button></div>
             <div className="party-list">
               {parties.slice().sort((a, b) => a.laneOrder - b.laneOrder).map((p, idx, arr) => (
                 <div className="party-row" key={p.id}>
@@ -1704,12 +2143,12 @@ function App() {
                   <span className="lane-label">track {p.laneOrder + 1}</span>
                   <button className="icon-btn" title="Move earlier track" disabled={idx === 0} onClick={() => moveParty(p.id, -1)}>{"↑"}</button>
                   <button className="icon-btn" title="Move later track" disabled={idx === arr.length - 1} onClick={() => moveParty(p.id, 1)}>{"↓"}</button>
-                  <button className="icon-btn danger" title="Remove party" onClick={() => requestRemoveParty(p.id)}>{"✕"}</button>
+                  <button className="icon-btn danger" title="Remove group" onClick={() => requestRemoveParty(p.id)}>{"✕"}</button>
                 </div>
               ))}
-              {parties.length === 0 ? <p className="mgr-note">No parties yet. Add one to put it on an event.</p> : null}
+              {parties.length === 0 ? <p className="mgr-note">No groups yet. Add one to put it on an event.</p> : null}
             </div>
-            <p className="mgr-note">Track order sets where each party's line sits when several parties share a place in the map. Removing a party takes it off every event and sub event it was on.</p>
+            <p className="mgr-note">Track order sets where each group's line sits when several groups share a place in the map. Removing a group takes it off every event and moment it was on.</p>
           </div>
           <div className="mgr-card">
             <div className="mgr-head"><h3>Places</h3><button className="btn" onClick={addPlace}>Add place</button></div>
@@ -1754,11 +2193,51 @@ function App() {
         </div>
       ) : null}
 
+      {view === "timeline" ? (
+        <React.Fragment>
+          {sortedParties.length ? (
+            <div className="viewas">
+              <p className="viewas-label">Show me the day for</p>
+              <div className="chips" role="group" aria-label="Filter by group">
+                <button type="button" className="fchip" aria-pressed={!viewAs} onClick={() => setViewAs(null)}>Everyone</button>
+                {sortedParties.map(p => (
+                  <button type="button" key={p.id} className="fchip" aria-pressed={viewAs === p.id} onClick={() => setViewAs(viewAs === p.id ? null : p.id)}><i className="pdot" style={{ background: p.color }}></i>{p.name}</button>
+                ))}
+              </div>
+              {viewAsParty ? <p className="showing">Showing {shownEventCount} of {events.length} events for <b>{viewAsParty.name}</b> {"·"} <button type="button" onClick={() => setViewAs(null)}>Show everyone</button></p> : null}
+            </div>
+          ) : null}
+          <button type="button" className="rail-toggle" aria-expanded={railOpen} onClick={() => setRailOpen(v => !v)}>
+            {editable ? (
+              <span className="rt-l"><span>Planning summary</span>{needList.length ? <span className="count">{needList.length} still to book</span> : null}{warnList.length ? <span className="count warn">{warnList.length} to check</span> : null}</span>
+            ) : <span>The day at a glance</span>}
+            {ICONS.chev}
+          </button>
+          <div className="layout">
+            <aside className={"rail-col" + (railOpen ? " open" : "")} aria-label="Summary">
+              <SummaryRail viewer={!editable} needList={needList} warnList={warnList} counts={statusCounts} total={rows.length} glance={glance} onSelect={setSelId} />
+            </aside>
+            <main className="tl">
+              <div className="tl-legend">
+                <span><i className="kdot k-c"></i>Confirmed</span>
+                <span><i className="kdot k-t"></i>{editable ? "Tentative" : "To be confirmed"}</span>
+                {editable ? <span><i className="kdot k-u"></i>Still to book</span> : null}
+              </div>
+              <TimelineView events={events} subEvents={subEvents} parties={parties} places={places} resolved={resolved} warningsById={warningsById}
+                selId={selId} onSelect={setSelId} viewer={!editable} viewAs={viewAs} onAddEvent={addEvent} />
+            </main>
+          </div>
+        </React.Fragment>
+      ) : view === "map" ? (
+        <MapView events={events} subEvents={subEvents} parties={parties} places={places} resolved={resolved} selId={selId} setSelId={setSelId}
+          collapse={collapseTrunk} showLabels={showLabels} onMovePlaceTo={movePlaceTo} onAddEvent={addEvent} onAddSubEvent={addSubEvent} filter={filter} editable={editable} onExpandedChange={setMapFs} />
+      ) : (
+      <fieldset className="edit-scope" disabled={!editable}>
       <div className="table-wrap">
         <table className="grid">
           <thead>
             <tr>
-              <th>Row</th><th className="col-name">Name</th><th>Parties</th><th>Place</th><th>Time rule</th><th>Start</th><th>Duration</th><th>End</th><th>Status</th><th>Owner</th><th>Vendor</th><th>Notes</th><th className="col-warn" title="Warnings">!</th><th></th>
+              <th>Type</th><th className="col-name">Name</th><th>Groups</th><th>Place</th><th>Starts</th><th>Start</th><th>Duration</th><th>End</th><th>Status</th>{editable ? (<React.Fragment><th>Handled by</th><th>Vendor</th><th>Private notes</th><th className="col-warn" title="Worth a look">!</th><th></th></React.Fragment>) : null}
             </tr>
           </thead>
           <tbody>
@@ -1767,7 +2246,7 @@ function App() {
               if (!visRows.length) return null;
               return (
                 <React.Fragment key={"sec-" + section.label}>
-                  <tr className="section-row"><td colSpan={14}>{section.label}</td></tr>
+                  <tr className="section-row"><td colSpan={editable ? 14 : 9}>{section.label}</td></tr>
                   {visRows.map(item => {
                     const s = item.row; const r = resolved[s.id] || {}; const w = warningsById[s.id] || [];
                     const isMoment = item.kind === "subEvent"; const host = item.host || null; const hostRes = host ? (resolved[host.id] || {}) : {};
@@ -1775,7 +2254,7 @@ function App() {
                     return (
                       <tr key={s.id} className={selId === s.id ? "sel" : ""} onClick={() => setSelId(s.id)}>
                         <td>
-                          {isMoment ? (<span className="end-val" title={host ? "A sub event on " + eventName(host, places) : "This sub event has no event"}>sub event</span>) : (
+                          {isMoment ? (<span className="end-val" title={host ? "A moment during " + eventName(host, places) : "This moment has no event"}>moment</span>) : (
                             <select className="cell-select" value={s.type} onClick={e => e.stopPropagation()} onChange={e => updateEvent(s.id, { type: e.target.value })}><option value="event">event</option><option value="travel">travel</option></select>)}
                         </td>
                         <td className="col-name">
@@ -1805,7 +2284,7 @@ function App() {
                           {isMoment ? (
                             <select className="cell-select" value={s.pinned ? "pinned" : "float"} onClick={e => e.stopPropagation()}
                               onChange={e => { const pin = e.target.value === "pinned"; if (pin) updateSubEvent(s.id, { pinned: true, start: r.start != null ? r.start : null }); else updateSubEvent(s.id, { pinned: false, start: null, offset: (r.start != null && hostRes.start != null) ? r.start - hostRes.start : 0 }); }}>
-                              <option value="float">floats with event</option><option value="pinned">pinned time</option>
+                              <option value="float">follows the event</option><option value="pinned">fixed time</option>
                             </select>
                           ) : (
                             <div className="after-cell">
@@ -1816,13 +2295,13 @@ function App() {
                         </td>
                         <td className="col-start">
                           <div className="start-cell">
-                            {isMoment ? (s.pinned ? <span className="pin-dot" title="Pinned time"></span> : <span className="auto-chip" title={"Floats, " + (s.offset || 0) + " min into the event"}>{"+" + (s.offset || 0) + "m"}</span>) : (s.start != null ? <span className="pin-dot" title="Pinned start time"></span> : (s.follows ? <span className="auto-chip" title="Starts after another event">auto</span> : null))}
+                            {isMoment ? (s.pinned ? <span className="pin-dot" title="Pinned time"></span> : <span className="auto-chip" title={"Follows the event, " + (s.offset || 0) + " min in"}>{"+" + (s.offset || 0) + "m"}</span>) : (s.start != null ? <span className="pin-dot" title="Pinned start time"></span> : (s.follows ? <span className="auto-chip" title="Starts after another event">auto</span> : null))}
                             <input
                               className={"cell-input time" + ((isMoment ? s.pinned : s.start != null) ? " pinned" : " inherited")}
                               defaultValue={isMoment ? fmtTime(r.start) : fmtTime(s.start)}
                               key={s.id + "_" + (isMoment ? (r.start == null ? "n" : r.start) : (s.start == null ? "n" : s.start))}
                               placeholder={isMoment ? "set time" : (s.start == null ? (r.start != null ? fmtTime(r.start) : "set time") : "9:00 am")}
-                              title={isMoment ? (s.pinned ? "Pinned. Switch to floats to let it ride along." : "Floats with the event. Typing a time changes how far into the event it sits.") : (s.start != null ? "Pinned. Clear it to fall back to starts after." : "Computed from starts after. Type a time to pin it.")}
+                              title={isMoment ? (s.pinned ? "Fixed time. Switch to follows the event to let it ride along." : "Follows the event. Typing a time changes how far into the event it sits.") : (s.start != null ? "Pinned. Clear it to fall back to starts after." : "Computed from starts after. Type a time to pin it.")}
                               onClick={e => e.stopPropagation()}
                               onBlur={e => { const v = parseTime(e.target.value);
                                 if (isMoment) { if (v === undefined || v === null) { e.target.value = fmtTime(r.start); return; } if (s.pinned) updateSubEvent(s.id, { start: v }); else if (hostRes.start != null) updateSubEvent(s.id, { offset: v - hostRes.start }); }
@@ -1838,21 +2317,25 @@ function App() {
                           <span className={"end-field" + (r.end == null ? " unset" : "")} title="Computed end, start plus duration">{isMoment && s.duration === 0 ? "point" : (r.end == null ? "not set" : fmtTime(r.end))}</span>
                         </td>
                         <td>
-                          <select className={"cell-select status-sel st-" + s.status} value={s.status} onClick={e => e.stopPropagation()} onChange={e => { const patch = { status: e.target.value }; isMoment ? updateSubEvent(s.id, patch) : updateEvent(s.id, patch); }}><option value="confirmed">confirmed</option><option value="provisional">provisional</option><option value="unbooked">unbooked</option></select>
+                          <select className={"cell-select status-sel st-" + s.status} value={s.status} onClick={e => e.stopPropagation()} onChange={e => { const patch = { status: e.target.value }; isMoment ? updateSubEvent(s.id, patch) : updateEvent(s.id, patch); }}><option value="confirmed">Confirmed</option><option value="provisional">{statusText("provisional", !editable)}</option><option value="unbooked">{statusText("unbooked", !editable)}</option></select>
                         </td>
-                        <td><input className="cell-input" style={{ minWidth: "110px" }} value={s.owner || ""} placeholder="owner" onClick={e => e.stopPropagation()} onChange={e => { const patch = { owner: e.target.value }; isMoment ? updateSubEvent(s.id, patch) : updateEvent(s.id, patch); }} /></td>
+                        {editable ? (<React.Fragment>
+                        <td><input className="cell-input" style={{ minWidth: "110px" }} value={s.owner || ""} placeholder="handled by" onClick={e => e.stopPropagation()} onChange={e => { const patch = { owner: e.target.value }; isMoment ? updateSubEvent(s.id, patch) : updateEvent(s.id, patch); }} /></td>
                         <td><input className="cell-input" style={{ minWidth: "120px" }} value={(s.vendor && s.vendor.name) || ""} placeholder="vendor" onClick={e => e.stopPropagation()} onChange={e => { const patch = { vendor: { ...(s.vendor || { name: "", contact: "", phone: "", email: "" }), name: e.target.value } }; isMoment ? updateSubEvent(s.id, patch) : updateEvent(s.id, patch); }} /></td>
                         <td><input className="cell-input" style={{ minWidth: "140px" }} value={s.notes} placeholder="notes" onClick={e => e.stopPropagation()} onChange={e => { const patch = { notes: e.target.value }; isMoment ? updateSubEvent(s.id, patch) : updateEvent(s.id, patch); }} /></td>
+                        </React.Fragment>) : null}
+                        {editable ? (<React.Fragment>
                         <td className="col-warn">{w.length > 0 ? <span className="warnflag" title={w.join("\n")}>{"▲"}</span> : ""}</td>
                         <td>
                           {editable ? (
                             <div className="row-actions" onClick={e => e.stopPropagation()}>
-                              {!isMoment ? <button className="icon-btn" title="Add a sub event on this line" onClick={() => addSubEvent(s.id, null)}>{"+"}</button> : null}
+                              {!isMoment ? <button className="icon-btn" title="Add a moment to this event" onClick={() => addSubEvent(s.id, null)}>{"+"}</button> : null}
                               <button className="icon-btn" title="Duplicate row" onClick={() => (isMoment ? duplicateSubEvent(s.id) : duplicateEvent(s.id))}>{"⧉"}</button>
                               <button className="icon-btn danger" title="Delete row" onClick={() => (isMoment ? deleteSubEvent(s.id) : requestDeleteEvent(s.id))}>{"✕"}</button>
                             </div>
                           ) : null}
                         </td>
+                        </React.Fragment>) : null}
                       </tr>
                     );
                   })}
@@ -1877,21 +2360,23 @@ function App() {
             <div className="io-row">
               <button className="btn" onClick={downloadBackup}>Download backup (JSON)</button>
               <button className="btn" onClick={downloadCsv}>Export CSV</button>
+              <span className="spacer"></span>
+              <button className="btn subtle danger-btn" onClick={clearTimeline} title="Remove every event and moment to start fresh">Clear the whole timeline</button>
             </div>
           </div>
         </div>
       ) : null}
 
       <div className="foot">
-        <b>How time resolves:</b> an event is pinned when it has a start time, otherwise it starts when the event it follows ends, plus any gap. A sub event is either pinned to a clock time or floats, keeping its distance from the start of the event it sits on, so it rides along when that event moves. End is always start plus duration and is never editable. Times are stored as minutes from midnight and shown in 12 hour time.
+        <b>How times work:</b> an event holds a clock time when it has a start time. Otherwise it starts when the event it follows ends, plus any gap. A moment either holds a clock time or follows its event, keeping its distance from the event's start, so it moves along with it. The end time is always the start plus how long it runs. Times are shown in 12 hour time.
       </div>
 
-      <Inspector kind={selKind} row={selEvent || selSubEvent} events={events} subEvents={subEvents} parties={parties} places={places} resolved={resolved}
+      {!mapFs ? <DetailPanel kind={selKind} row={selEvent || selSubEvent} events={events} subEvents={subEvents} parties={parties} places={places} resolved={resolved}
         warnings={selId ? warningsById[selId] : null} editable={editable}
         onUpdate={patch => (selKind === "event" ? updateEvent(selId, patch) : updateSubEvent(selId, patch))}
         onDuplicate={() => (selKind === "event" ? duplicateEvent(selId) : duplicateSubEvent(selId))}
         onDelete={() => (selKind === "event" ? requestDeleteEvent(selId) : deleteSubEvent(selId))}
-        onClose={() => setSelId(null)} onAddSubEvent={addSubEvent} onSelect={id => setSelId(id)} onUpdatePlace={updatePlace} onUpdateParty={updateParty} />
+        onClose={() => setSelId(null)} onAddSubEvent={addSubEvent} onSelect={id => setSelId(id)} onUpdatePlace={updatePlace} onUpdateParty={updateParty} /> : null}
 
       {confirm ? (
         <div className="modal-scrim" onClick={() => setConfirm(null)}>
