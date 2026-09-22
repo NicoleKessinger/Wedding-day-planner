@@ -860,6 +860,23 @@ function moveEventPatch(ev, resolved, newStart) {
   if (ev.follows) { const f = resolved[ev.follows]; if (f && f.end != null) return { gap: Math.max(0, newStart - f.end) }; }
   return null;
 }
+/* Call times. A time set on the event wins. Otherwise a group's default call time belongs to the first event it is on at or after that time. */
+function partyCallTargets(events, parties, resolved) {
+  const out = {};
+  parties.forEach(p => {
+    if (p.callTime == null) return;
+    const cand = events.filter(s => s.type === "event" && (s.parties || []).includes(p.id) && resolved[s.id] && resolved[s.id].start != null && resolved[s.id].start >= p.callTime)
+      .sort((a, b) => resolved[a.id].start - resolved[b.id].start);
+    if (cand[0]) out[p.id] = cand[0].id;
+  });
+  return out;
+}
+function callTimeFor(s, pid, parties, targets) {
+  if (s.type !== "event") return null;
+  if (s.callTimes && s.callTimes[pid] != null) return s.callTimes[pid];
+  const p = parties.find(x => x.id === pid);
+  return (p && p.callTime != null && targets[pid] === s.id) ? p.callTime : null;
+}
 /* ================= Map ================= */
 function MapView({ events, subEvents, parties, places, resolved: resolvedProp, selId, setSelId, collapse, showLabels, onMovePlaceTo, onMoveEvent, onAddEvent, onAddSubEvent, filter, editable: editableProp, onExpandedChange }) {
   const matches = s => filter === "all" || !filter || s.status !== "confirmed";
@@ -926,21 +943,16 @@ function MapView({ events, subEvents, parties, places, resolved: resolvedProp, s
 
   /* call times: a group is called before an event starts, so its line begins early. A time set on the event wins, otherwise the group's default call time belongs to the first event it is on at or after that time. */
   const partyById = {}; parties.forEach(p => { partyById[p.id] = p; });
-  const callDefault = {};
-  parties.forEach(p => {
-    if (p.callTime == null) return;
-    const cand = placed.filter(s => s.type === "event" && (s.parties || []).includes(p.id) && resolvedProp[s.id] && resolvedProp[s.id].start != null && resolvedProp[s.id].start >= p.callTime)
-      .sort((a, b) => resolvedProp[a.id].start - resolvedProp[b.id].start);
-    if (cand[0]) callDefault[p.id] = cand[0].id;
-  });
+  const callTargets = partyCallTargets(placed, parties, resolvedProp);
   const callMap = {};   /* event id -> { party id -> call minute } */
   placed.forEach(s => {
-    if (!editableProp || s.type !== "event" || trunkEvent(s)) return;   /* call times are private planning details, so only editors see them */
-    const r = resolved[s.id];
+    if (s.type !== "event" || trunkEvent(s)) return;
+    const r = resolved[s.id]; const shift = r.start - resolvedProp[s.id].start;   /* call times travel with the event while it is dragged */
     (s.parties || []).forEach(pid => {
       if (rankOf[pid] == null) return;
-      let c = (s.callTimes && s.callTimes[pid] != null) ? s.callTimes[pid] : (callDefault[pid] === s.id ? partyById[pid].callTime : null);
+      let c = callTimeFor(s, pid, parties, callTargets);
       if (c == null) return;
+      c = Math.max(0, c + shift);
       placed.forEach(o => { if (o.id !== s.id && (o.parties || []).includes(pid)) { const ro = resolved[o.id]; if (ro.end <= r.start && ro.end > c) c = ro.end; } });   /* never reach back into what the group was doing before */
       if (c < r.start) (callMap[s.id] = callMap[s.id] || {})[pid] = c;
     });
@@ -1288,7 +1300,7 @@ function MapView({ events, subEvents, parties, places, resolved: resolvedProp, s
         <span className="li"><svg width="18" height="14" aria-hidden="true"><circle cx="9" cy="7" r="4.5" style={{ fill: "var(--surface)", stroke: "var(--ink)" }} strokeWidth="2" /></svg> moment on a line</span>
         <span className="li"><svg width="18" height="14" aria-hidden="true"><circle cx="9" cy="7" r="4.5" style={{ fill: "var(--surface)", stroke: "var(--ink)" }} strokeWidth="3.4" /></svg> fixed-time moment</span>
         <span className="li"><svg width="18" height="14" aria-hidden="true"><circle cx="9" cy="7" r="3.2" style={{ fill: "var(--surface)", stroke: "var(--ink)" }} strokeWidth="1.6" strokeOpacity="0.7" /></svg> where a moment ends</span>
-        {editableProp ? <span className="li"><svg width="18" height="14" aria-hidden="true"><circle cx="9" cy="7" r="3.4" style={{ fill: "var(--ink)" }} /></svg> call time, where the line starts</span> : null}
+        <span className="li"><svg width="18" height="14" aria-hidden="true"><circle cx="9" cy="7" r="3.4" style={{ fill: "var(--ink)" }} /></svg> call time, where the line starts</span>
         <span className="li"><svg width="34" height="10" aria-hidden="true"><line x1="2" y1="5" x2="32" y2="5" style={{ stroke: "var(--ink)" }} strokeWidth="2.5" strokeOpacity="0.32" strokeDasharray="1 7" strokeLinecap="round" /></svg> continues, not planned</span>
       </div>
     </div>
@@ -1598,6 +1610,9 @@ function DetailPanel({ kind, row, events, subEvents, parties, places, resolved, 
   const fromEv = isEvent && row.type === "travel" && row.follows ? events.find(s => s.id === row.follows) : null;
   const fromPlace = fromEv && fromEv.location ? places.find(p => p.id === fromEv.location) : null;
 
+  const callTargets = isEvent ? partyCallTargets(events, parties, resolved) : {};
+  const callRows = partyObjs.map(p => ({ p, t: callTimeFor(row, p.id, parties, callTargets) })).filter(c => c.t != null && r.start != null && c.t < r.start);
+
   /* ---------- read-only view for guests and the bridal party ---------- */
   if (!editable) {
     return (
@@ -1611,6 +1626,9 @@ function DetailPanel({ kind, row, events, subEvents, parties, places, resolved, 
         ) : null}
         {!isEvent && host ? <Psec title="During"><button type="button" className="link-btn" onClick={() => onSelect(host.id)}>{cardTitle(host, places)}</button></Psec> : null}
         {partyObjs.length ? <Psec title="Who"><ul className="plist">{partyObjs.map(p => <li key={p.id}><i className="pdot" style={{ background: p.color }}></i>{p.name}</li>)}</ul></Psec> : null}
+        {isEvent && row.type === "event" && r.start != null && callRows.length ? (
+          <Psec title="Call times"><ul className="mlist">{callRows.map(c => <li key={c.p.id}><span className="mt">{fmtTime(c.t)}</span><span className="mn">{c.p.name}</span></li>)}</ul></Psec>
+        ) : null}
         {kids.length ? (
           <Psec title="Moments"><ul className="mlist">{kids.map(c => { const cr = resolved[c.id] || {}; return <li key={c.id}><span className="mt">{cr.start != null ? fmtTime(cr.start) : "–"}</span><span className="mn">{c.name || "Untitled moment"}</span></li>; })}</ul></Psec>
         ) : null}
@@ -1946,6 +1964,20 @@ function App() {
   /* ----- edits (all guarded so viewers cannot change anything) ----- */
   function updateEvent(id, patch) { if (!editable) return; setEvents(prev => prev.map(s => (s.id === id ? { ...s, ...patch } : s))); }
   function updateSubEvent(id, patch) { if (!editable) return; setSubEvents(prev => prev.map(m => (m.id === id ? { ...m, ...patch } : m))); }
+  /* a drag on the map: the event moves and so do the events that follow it. Call times move by the same amount, and fixed-time moments stay put. */
+  function moveEvent(id, patch) {
+    if (!editable) return;
+    const nextEvents = events.map(s => (s.id === id ? { ...s, ...patch } : s));
+    const nr = resolveAll(nextEvents, subEvents);
+    const targets = partyCallTargets(events, parties, resolved);
+    const delta = eid => (resolved[eid] && nr[eid] && resolved[eid].start != null && nr[eid].start != null) ? nr[eid].start - resolved[eid].start : 0;
+    setEvents(nextEvents.map(s => {
+      const d = delta(s.id); if (!d || !s.callTimes) return s;
+      const ct = {}; Object.keys(s.callTimes).forEach(k => { const v = s.callTimes[k]; ct[k] = v == null ? v : Math.max(0, v + d); });
+      return { ...s, callTimes: ct };
+    }));
+    setParties(prev => prev.map(p => { const d = targets[p.id] ? delta(targets[p.id]) : 0; return (d && p.callTime != null) ? { ...p, callTime: Math.max(0, p.callTime + d) } : p; }));
+  }
   function addEvent(patch) {
     if (!editable) return;
     const s = normEvent({ id: newId("ev"), type: "event", label: "", parties: [], location: places[0] ? places[0].id : null, follows: null, start: null, duration: 30, status: "provisional", ...patch });
@@ -2311,7 +2343,7 @@ function App() {
         </React.Fragment>
       ) : view === "map" ? (
         <MapView events={events} subEvents={subEvents} parties={parties} places={places} resolved={resolved} selId={selId} setSelId={setSelId}
-          collapse={collapseTrunk} showLabels={showLabels} onMovePlaceTo={movePlaceTo} onMoveEvent={updateEvent} onAddEvent={addEvent} onAddSubEvent={addSubEvent} filter={filter} editable={editable} onExpandedChange={setMapFs} />
+          collapse={collapseTrunk} showLabels={showLabels} onMovePlaceTo={movePlaceTo} onMoveEvent={moveEvent} onAddEvent={addEvent} onAddSubEvent={addSubEvent} filter={filter} editable={editable} onExpandedChange={setMapFs} />
       ) : (
       <fieldset className="edit-scope" disabled={!editable}>
       <div className="table-wrap">
