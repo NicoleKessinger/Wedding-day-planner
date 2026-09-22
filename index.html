@@ -2043,7 +2043,6 @@ function App() {
   const [view, setView] = useState("timeline");
   const [viewAs, setViewAs] = useState(null);
   const [railOpen, setRailOpen] = useState(false);
-  const [mapFs, setMapFs] = useState(false);
   const [collapseTrunk, setCollapseTrunk] = useState(false);
   const [filter, setFilter] = useState("all");
   const [confirm, setConfirm] = useState(null);
@@ -2549,7 +2548,7 @@ function App() {
         </React.Fragment>
       ) : view === "map" ? (
         <MapView events={events} subEvents={subEvents} parties={parties} places={places} resolved={resolved} selId={selId} setSelId={setSelId}
-          collapse={collapseTrunk} onMovePlaceTo={movePlaceTo} onMoveEvent={moveEvent} onAddEvent={addEvent} onAddSubEvent={addSubEvent} filter={filter} editable={editable} onExpandedChange={setMapFs} />
+          collapse={collapseTrunk} onMovePlaceTo={movePlaceTo} onMoveEvent={moveEvent} onAddEvent={addEvent} onAddSubEvent={addSubEvent} filter={filter} editable={editable} />
       ) : (
       <fieldset className="edit-scope" disabled={!editable}>
       <div className="table-wrap">
@@ -2691,7 +2690,7 @@ function App() {
       </div>
 
       <DetailPanel kind={selKind} row={selEvent || selSubEvent} events={events} subEvents={subEvents} parties={parties} places={places} resolved={resolved}
-        warnings={!draft && selId ? warningsById[selId] : null} editable={editable && !mapFs}
+        warnings={!draft && selId ? warningsById[selId] : null} editable={editable}
         isDraft={!!draft} onSave={saveDraft} onDiscard={discardDraft}
         onUpdate={patch => (draft ? updateDraft(patch) : (selKind === "event" ? updateEvent(selId, patch) : updateSubEvent(selId, patch)))}
         onDuplicate={() => (selKind === "event" ? duplicateEvent(selId) : duplicateSubEvent(selId))}
