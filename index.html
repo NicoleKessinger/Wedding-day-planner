@@ -96,6 +96,7 @@
   .mc-group { display: inline-flex; align-items: center; gap: 8px; }
   .zoom-pct { font-size: 16px; color: var(--muted); min-width: 46px; text-align: center; font-variant-numeric: lining-nums tabular-nums; }
   .seg.sm .seg-btn { padding: 4px 14px; font-size: 16px; }
+  .seg-btn .seg-sub { display: block; font-size: 10px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; opacity: 0.8; line-height: 1.3; margin-top: -1px; }
   .mc-focus { display: inline-flex; align-items: center; gap: 8px; font-size: 16px; color: var(--muted); }
   .mc-focus .cell-select { border: 1px solid var(--border-strong); border-radius: 8px; padding: 5px 8px; background: var(--surface); }
   .party-legend { display: flex; flex-wrap: wrap; gap: 6px 16px; margin-bottom: 12px; font-size: 17px; color: var(--muted); }
@@ -237,6 +238,12 @@
   .fld { display: flex; flex-direction: column; gap: 4px; }
   .fld > span { font-size: 13px; text-transform: uppercase; letter-spacing: 0.12em; color: var(--muted); font-weight: 700; }
   .fld2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .fld-row { display: flex; gap: 8px; align-items: center; }
+  .fld-row .cell-input.bx { flex: 1 1 auto; }
+  .star-btn { flex: none; display: flex; align-items: center; justify-content: center; width: 38px; height: 38px; border-radius: 8px; border: 1px solid var(--border-strong); background: var(--surface); color: var(--border-strong); cursor: pointer; }
+  .star-btn .i { fill: none; stroke: currentColor; stroke-width: 1.3; stroke-linejoin: round; }
+  .star-btn.on { color: var(--accent); background: var(--accent-soft); border-color: var(--accent); }
+  .star-btn.on .i { fill: currentColor; }
   .cell-input.bx, .cell-select.bx { border: 1px solid var(--border-strong); background: var(--surface); border-radius: 8px; padding: 7px 10px; width: 100%; }
   .cell-input.bx:focus, .cell-select.bx:focus { border-color: var(--steel); }
   .insp-parties { min-width: 0; }
@@ -727,10 +734,13 @@ function normEvent(s) {
 }
 function normSubEvent(m) {
   const pinned = !!m.pinned;
+  /* "starred" marks a moment as key for the map's Key detail level. It defaults to whether the moment is
+     pinned to a fixed clock time, since that's usually what matters, but the couple can turn it off or on by hand. */
+  const starred = m.starred !== undefined ? !!m.starred : pinned;
   return {
     id: m.id || newId("sub"), name: m.name || "",
     event: m.event !== undefined ? m.event : (m.stay !== undefined ? m.stay : (m.parent !== undefined ? m.parent : null)),
-    parties: Array.isArray(m.parties) ? m.parties : [], pinned,
+    parties: Array.isArray(m.parties) ? m.parties : [], pinned, starred,
     start: pinned ? (m.start === undefined ? null : m.start) : null,
     offset: pinned ? 0 : (m.offset == null ? 0 : m.offset),
     duration: (m.duration === null || m.duration === undefined) ? 0 : m.duration,
@@ -885,7 +895,17 @@ function callTimeFor(s, pid, parties, targets) {
   return (p && p.callTime != null && targets[pid] === s.id) ? p.callTime : null;
 }
 /* ================= Map ================= */
-function MapView({ events, subEvents, parties, places, resolved: resolvedProp, selId, setSelId, collapse, showLabels, onMovePlaceTo, onMoveEvent, onAddEvent, onAddSubEvent, filter, editable: editableProp, onExpandedChange }) {
+/* How much of the day the map shows. Auto picks a level from zoom, like a phone map revealing detail as you zoom in;
+   the other three levels pin it in place. Key means "starred", not merely "has a moment". */
+const DETAIL_LEVELS = [
+  { key: "auto", label: "Auto" },
+  { key: "overview", label: "Overview" },
+  { key: "key", label: "Key" },
+  { key: "everything", label: "Everything" },
+];
+function autoDetailLevel(zoom) { return zoom < 0.7 ? "overview" : zoom < 1.15 ? "key" : "everything"; }
+
+function MapView({ events, subEvents, parties, places, resolved: resolvedProp, selId, setSelId, collapse, onMovePlaceTo, onMoveEvent, onAddEvent, onAddSubEvent, filter, editable: editableProp, onExpandedChange }) {
   const matches = s => filter === "all" || !filter || s.status !== "confirmed";
   const svgRef = useRef(null); const wrapRef = useRef(null);
   const [dragId, setDragId] = useState(null);
@@ -895,7 +915,10 @@ function MapView({ events, subEvents, parties, places, resolved: resolvedProp, s
   const [hoverParty, setHoverParty] = useState(null);
   const [hoverAdd, setHoverAdd] = useState(null);
   const [zoom, setZoom] = useState(1);
-  const [density, setDensity] = useState("full");
+  const [detailLevel, setDetailLevel] = useState("auto");
+  const effLevel = detailLevel === "auto" ? autoDetailLevel(zoom) : detailLevel;
+  const showMoments = effLevel !== "overview";
+  const showAll = effLevel === "everything";   /* call-time dots and where-a-moment-ends marks, reserved for the fullest level */
   const highlight = hoverParty || focusParty;
   const [expanded, setExpanded] = useState(false);
   const shellRef = useRef(null);
@@ -1106,9 +1129,14 @@ function MapView({ events, subEvents, parties, places, resolved: resolvedProp, s
           <button className="btn subtle sm" onClick={() => zoomBy(1.25)} title="Zoom in">{"+"}</button>
           <button className="btn subtle sm" onClick={fitToDay} title="Fit the whole day to the view">Fit day</button>
         </div>
-        <div className="seg sm">
-          <button className={"seg-btn" + (density === "full" ? " on" : "")} onClick={() => setDensity("full")}>Full</button>
-          <button className={"seg-btn" + (density === "key" ? " on" : "")} onClick={() => setDensity("key")}>Key moments</button>
+        <div className="seg sm" role="group" aria-label="Detail level">
+          {DETAIL_LEVELS.map(d => (
+            <button key={d.key} className={"seg-btn" + (detailLevel === d.key ? " on" : "")} aria-pressed={detailLevel === d.key}
+              onClick={() => setDetailLevel(d.key)}
+              title={d.key === "auto" ? "Reveal more detail as you zoom in" : d.key === "overview" ? "Events and travel only" : d.key === "key" ? "Adds starred moments" : "Everything: all moments, call times and where they end"}>
+              {d.label}{d.key === "auto" && detailLevel === "auto" ? <span className="seg-sub">{DETAIL_LEVELS.find(x => x.key === effLevel).label}</span> : null}
+            </button>
+          ))}
         </div>
         <label className="mc-focus">Focus
           <select className="cell-select" value={focusParty || ""} onChange={e => setFocusParty(e.target.value || null)}>
@@ -1215,7 +1243,7 @@ function MapView({ events, subEvents, parties, places, resolved: resolvedProp, s
                     <g key={pid} {...hoverH}>
                       {sel ? <line x1={sx} y1={yTop} x2={dx} y2={y2} style={{ stroke: "var(--accent)" }} strokeOpacity={0.32 * d} strokeWidth={st.w + 10} strokeLinecap="round" /> : null}
                       <line x1={sx} y1={yTop} x2={dx} y2={y2} stroke={col} strokeWidth={st.w} strokeOpacity={st.op * d} strokeDasharray={st.dash} strokeLinecap="round" />
-                      {cs != null ? <circle cx={dx} cy={yTop} r={3.4} fill={col} fillOpacity={st.op * d} /> : null}
+                      {cs != null && showAll ? <circle cx={dx} cy={yTop} r={3.4} fill={col} fillOpacity={st.op * d} /> : null}
                       {!isTravel ? <circle cx={dx} cy={y1} r={st.w / 2 + 2} fill="var(--surface)" stroke={col} strokeWidth="2.5" strokeOpacity={st.op * d} /> : null}
                       {!isTravel ? <circle cx={dx} cy={y2} r={st.w / 2 + 2} fill="var(--surface)" stroke={col} strokeWidth="2.5" strokeOpacity={st.op * d} /> : null}
                       <title>{eventName(s, places) + ", " + fmtTime(r.start) + " to " + fmtTime(r.end) + (cs != null ? ", " + ((partyById[pid] && partyById[pid].name) || "group") + " called at " + fmtTime(cs) : "") + ", " + statusText(s.status, !editableProp)}</title>
@@ -1227,7 +1255,8 @@ function MapView({ events, subEvents, parties, places, resolved: resolvedProp, s
           })}
 
           {shownSubEvents.map(m => {
-            if (density === "key" && m.duration === 0 && !m.pinned) return null;
+            if (!showMoments) return null;
+            if (!showAll && !m.starred) return null;
             const host = byEvent[m.event]; const r = resolved[m.id];
             const y1 = yFor(r.start), y2 = yFor(r.end != null ? r.end : r.start);
             const isSpan = m.duration > 0 && y2 > y1 + 0.5; const sel = selId === m.id;
@@ -1245,14 +1274,14 @@ function MapView({ events, subEvents, parties, places, resolved: resolvedProp, s
                     <g key={pid} opacity={dimOf(pid)} onMouseEnter={() => setHoverParty(pid)} onMouseLeave={() => setHoverParty(null)}>
                       {sel ? <circle cx={x} cy={y1} r={9.5} style={{ fill: "var(--accent)" }} opacity="0.3" /> : null}
                       <circle cx={x} cy={y1} r={5.4} fill="var(--surface)" stroke={colorOf[pid] || "var(--ink)"} strokeWidth={m.pinned ? 4 : 3} />
-                      {isSpan ? <circle cx={x} cy={y2} r={3.8} fill="var(--surface)" stroke={colorOf[pid] || "var(--ink)"} strokeWidth="2" strokeOpacity="0.7" /> : null}
+                      {isSpan && showAll ? <circle cx={x} cy={y2} r={3.8} fill="var(--surface)" stroke={colorOf[pid] || "var(--ink)"} strokeWidth="2" strokeOpacity="0.7" /> : null}
                     </g>
                   );
                 })}
                 <title>{(m.name || "unnamed moment") + ", " + fmtTime(r.start) + (isSpan && r.end != null ? " to " + fmtTime(r.end) : "") + ", on " + eventName(host, places) + (m.pinned ? ", fixed time" : ", follows the event")}</title>
-                {((showLabels && !highlight) || sel) ? (() => {
+                {(!highlight || sel) ? (() => {
                   const tm = sel ? " · " + fmtTime(r.start) : "";   /* the time shows only on the selected label, the axis carries it otherwise */
-                  const shown = fitText(m.name || "unnamed moment", sel ? 280 : colRightEdge(host.location) - labelX - 6);
+                  const shown = fitText((m.starred && showAll ? "★ " : "") + (m.name || "unnamed moment"), sel ? 280 : colRightEdge(host.location) - labelX - 6);
                   return <text className={"lbl lbl-mo" + (sel ? " sel" : "")} x={labelX} y={y1 + 4.5}>{shown}{sel ? <tspan className="lbl-time">{tm}</tspan> : null}</text>;
                 })() : null}
               </g>
@@ -1260,7 +1289,7 @@ function MapView({ events, subEvents, parties, places, resolved: resolvedProp, s
           })}
 
           {placed.map(s => {
-            const sel = selId === s.id; if (!sel && (!showLabels || highlight)) return null;
+            const sel = selId === s.id; if (!sel && highlight) return null;   /* event and travel labels always show; only a party highlight thins them */
             const r = resolved[s.id]; const name = eventName(s, places);
             const tm = sel ? " · " + fmtTime(r.start) : "";   /* the time shows only on the selected label, the axis carries it otherwise */
             const pids = (s.parties || []).filter(p => rankOf[p] != null);
@@ -1325,10 +1354,12 @@ function MapView({ events, subEvents, parties, places, resolved: resolvedProp, s
         <span className="li"><svg width="34" height="10" aria-hidden="true"><line x1="2" y1="5" x2="32" y2="5" style={{ stroke: "var(--ink)" }} strokeWidth="5" strokeOpacity="0.62" strokeLinecap="round" /></svg> {editableProp ? "tentative" : "to be confirmed"}</span>
         <span className="li"><svg width="34" height="10" aria-hidden="true"><line x1="2" y1="5" x2="32" y2="5" style={{ stroke: "var(--ink)" }} strokeWidth="5" strokeDasharray="10 7" strokeLinecap="round" /></svg> {editableProp ? "still to book" : "details still open"}</span>
         <span className="li"><svg width="40" height="16" aria-hidden="true"><line x1="4" y1="13" x2="36" y2="3" style={{ stroke: "var(--ink)" }} strokeWidth="3" strokeLinecap="round" /></svg> travel between places</span>
-        <span className="li"><svg width="18" height="14" aria-hidden="true"><circle cx="9" cy="7" r="4.5" style={{ fill: "var(--surface)", stroke: "var(--ink)" }} strokeWidth="2" /></svg> moment on a line</span>
-        <span className="li"><svg width="18" height="14" aria-hidden="true"><circle cx="9" cy="7" r="4.5" style={{ fill: "var(--surface)", stroke: "var(--ink)" }} strokeWidth="3.4" /></svg> fixed-time moment</span>
-        <span className="li"><svg width="18" height="14" aria-hidden="true"><circle cx="9" cy="7" r="3.2" style={{ fill: "var(--surface)", stroke: "var(--ink)" }} strokeWidth="1.6" strokeOpacity="0.7" /></svg> where a moment ends</span>
-        <span className="li"><svg width="18" height="14" aria-hidden="true"><circle cx="9" cy="7" r="3.4" style={{ fill: "var(--ink)" }} /></svg> call time, where the line starts</span>
+        {showMoments ? (<React.Fragment>
+          <span className="li"><svg width="18" height="14" aria-hidden="true"><circle cx="9" cy="7" r="4.5" style={{ fill: "var(--surface)", stroke: "var(--ink)" }} strokeWidth="2" /></svg> moment on a line</span>
+          <span className="li"><svg width="18" height="14" aria-hidden="true"><circle cx="9" cy="7" r="4.5" style={{ fill: "var(--surface)", stroke: "var(--ink)" }} strokeWidth="3.4" /></svg> fixed-time moment</span>
+          {showAll ? <span className="li"><svg width="18" height="14" aria-hidden="true"><circle cx="9" cy="7" r="3.2" style={{ fill: "var(--surface)", stroke: "var(--ink)" }} strokeWidth="1.6" strokeOpacity="0.7" /></svg> where a moment ends</span> : <span className="li">★ key moment</span>}
+        </React.Fragment>) : null}
+        {showAll ? <span className="li"><svg width="18" height="14" aria-hidden="true"><circle cx="9" cy="7" r="3.4" style={{ fill: "var(--ink)" }} /></svg> call time, where the line starts</span> : null}
         <span className="li"><svg width="34" height="10" aria-hidden="true"><line x1="2" y1="5" x2="32" y2="5" style={{ stroke: "var(--ink)" }} strokeWidth="2.5" strokeOpacity="0.32" strokeDasharray="1 7" strokeLinecap="round" /></svg> continues, not planned</span>
       </div>
     </div>
@@ -1417,6 +1448,7 @@ const ICONS = {
   map: <svg className="i" viewBox="0 0 16 16" aria-hidden="true"><path d="M2.5 4.2 6 3l4 1.3L13.5 3v8.8L10 13 6 11.7 2.5 13z" /><path d="M6 3v8.7M10 4.3V13" /></svg>,
   table: <svg className="i" viewBox="0 0 16 16" aria-hidden="true"><rect x="2.5" y="3" width="11" height="10" rx="1.5" /><path d="M2.5 6.5h11M2.5 9.8h11M7 6.5V13" /></svg>,
   print: <svg className="i" viewBox="0 0 16 16" aria-hidden="true"><path d="M4.5 6V2.5h7V6M4.5 11.5h-2v-5h11v5h-2" /><rect x="4.5" y="9.5" width="7" height="4" /></svg>,
+  star: <svg className="i" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 2.3l1.8 3.7 4 .6-2.9 2.9.7 4-3.6-1.9-3.6 1.9.7-4-2.9-2.9 4-.6z" /></svg>,
 };
 
 /* ================= Timeline (cards on a time rail) ================= */
@@ -1810,7 +1842,14 @@ function DetailPanel({ kind, row, events, subEvents, parties, places, resolved, 
       {warnBlock ? <Psec>{warnBlock}</Psec> : null}
       <Psec title="What and when">
         <label className="fld"><span>What happens</span>
-          <input className="cell-input bx" value={row.name} placeholder="Bride hair done, dinner served" onChange={e => onUpdate({ name: e.target.value })} />
+          <div className="fld-row">
+            <input className="cell-input bx" value={row.name} placeholder="Bride hair done, dinner served" onChange={e => onUpdate({ name: e.target.value })} />
+            <button type="button" className={"star-btn" + (row.starred ? " on" : "")} aria-pressed={!!row.starred}
+              onClick={() => onUpdate({ starred: !row.starred })}
+              title={row.starred ? "Key moment. Shows on the map's Key detail level. Click to unstar." : "Not a key moment. Click to star it so it shows on the map's Key detail level."}>
+              {ICONS.star}
+            </button>
+          </div>
         </label>
         <label className="fld"><span>During this event</span>
           <select className="cell-select bx" value={row.event || ""} onChange={e => onUpdate({ event: e.target.value || null })}>
@@ -1871,7 +1910,6 @@ function App() {
   const [railOpen, setRailOpen] = useState(false);
   const [mapFs, setMapFs] = useState(false);
   const [collapseTrunk, setCollapseTrunk] = useState(false);
-  const [showLabels, setShowLabels] = useState(true);
   const [filter, setFilter] = useState("all");
   const [confirm, setConfirm] = useState(null);
   const [histTick, setHistTick] = useState(0);
@@ -2264,10 +2302,7 @@ function App() {
             <button className={"seg-btn" + (filter === "unconfirmed" ? " on" : "")} onClick={() => setFilter("unconfirmed")}>Still to confirm</button>
           </div>
           {view === "map" ? (
-            <React.Fragment>
-              <label className="chk"><input type="checkbox" checked={showLabels} onChange={e => setShowLabels(e.target.checked)} /> Show labels</label>
-              <label className="chk"><input type="checkbox" checked={collapseTrunk} onChange={e => setCollapseTrunk(e.target.checked)} /> Collapse where all together</label>
-            </React.Fragment>
+            <label className="chk"><input type="checkbox" checked={collapseTrunk} onChange={e => setCollapseTrunk(e.target.checked)} /> Collapse where all together</label>
           ) : null}
         </div>
       ) : null}
@@ -2371,7 +2406,7 @@ function App() {
         </React.Fragment>
       ) : view === "map" ? (
         <MapView events={events} subEvents={subEvents} parties={parties} places={places} resolved={resolved} selId={selId} setSelId={setSelId}
-          collapse={collapseTrunk} showLabels={showLabels} onMovePlaceTo={movePlaceTo} onMoveEvent={moveEvent} onAddEvent={addEvent} onAddSubEvent={addSubEvent} filter={filter} editable={editable} onExpandedChange={setMapFs} />
+          collapse={collapseTrunk} onMovePlaceTo={movePlaceTo} onMoveEvent={moveEvent} onAddEvent={addEvent} onAddSubEvent={addSubEvent} filter={filter} editable={editable} onExpandedChange={setMapFs} />
       ) : (
       <fieldset className="edit-scope" disabled={!editable}>
       <div className="table-wrap">
