@@ -302,6 +302,7 @@
   .ct-name { display: inline-flex; align-items: center; gap: 8px; font-size: 17px; color: var(--ink); }
   .ct-dot { width: 11px; height: 11px; border-radius: 50%; display: inline-block; flex: none; }
   .ct-hint { margin: 4px 0 0; font-size: 15px; color: var(--faint); line-height: 1.4; }
+  .draft-hint { margin: 0 0 14px; padding: 10px 12px; border-radius: 10px; background: var(--accent-soft); color: var(--ink); font-size: 15px; line-height: 1.4; }
   .loc-details { display: flex; flex-direction: column; gap: 6px; }
   .loc-name { font-size: 18px; font-weight: 700; color: var(--ink); }
   .party-defaults { border: 1px solid var(--border); border-radius: 10px; padding: 8px 12px; }
@@ -1261,14 +1262,21 @@ function MapView({ events, subEvents, parties, places, resolved: resolvedProp, s
             const y1 = yFor(r.start), y2 = yFor(r.end != null ? r.end : r.start);
             const isSpan = m.duration > 0 && y2 > y1 + 0.5; const sel = selId === m.id;
             const pids = (m.parties || []).filter(pid => rankOf[pid] != null && (host.parties || []).includes(pid));
-            if (!pids.length) return null;
-            const xs = pids.map(pid => xAt(host, pid)); const minX = Math.min(...xs), maxX = Math.max(...xs);
+            const orphanParty = !pids.length;
+            const fallbackX = colX(colIndex[host.location]) - BUNDLE_SHIFT;
+            const xs = orphanParty ? [fallbackX] : pids.map(pid => xAt(host, pid)); const minX = Math.min(...xs), maxX = Math.max(...xs);
             const labelX = maxX + 11;
             return (
               <g key={"mo" + m.id} style={{ cursor: "pointer" }} onClick={() => pick(m.id)}>
                 {pids.length > 1 ? <line x1={minX} y1={y1} x2={maxX} y2={y1} style={{ stroke: sel ? "var(--accent)" : "var(--muted)" }} strokeWidth={sel ? 3 : 2} strokeOpacity="0.5" strokeLinecap="round" /> : null}
                 {isSpan && pids.length > 1 ? <line x1={minX} y1={y2} x2={maxX} y2={y2} style={{ stroke: sel ? "var(--accent)" : "var(--muted)" }} strokeWidth={sel ? 2 : 1.5} strokeOpacity="0.35" strokeLinecap="round" strokeDasharray="3 3" /> : null}
-                {pids.map(pid => {
+                {orphanParty ? (
+                  <g opacity="0.85">
+                    {sel ? <circle cx={fallbackX} cy={y1} r={9.5} style={{ fill: "var(--accent)" }} opacity="0.3" /> : null}
+                    <circle cx={fallbackX} cy={y1} r={5.4} fill="var(--surface)" stroke="var(--muted)" strokeWidth={m.pinned ? 4 : 3} strokeDasharray="2 2" />
+                    {isSpan && showAll ? <circle cx={fallbackX} cy={y2} r={3.8} fill="var(--surface)" stroke="var(--muted)" strokeWidth="2" strokeOpacity="0.7" strokeDasharray="2 2" /> : null}
+                  </g>
+                ) : pids.map(pid => {
                   const x = xAt(host, pid);
                   return (
                     <g key={pid} opacity={dimOf(pid)} onMouseEnter={() => setHoverParty(pid)} onMouseLeave={() => setHoverParty(null)}>
@@ -1278,7 +1286,7 @@ function MapView({ events, subEvents, parties, places, resolved: resolvedProp, s
                     </g>
                   );
                 })}
-                <title>{(m.name || "unnamed moment") + ", " + fmtTime(r.start) + (isSpan && r.end != null ? " to " + fmtTime(r.end) : "") + ", on " + eventName(host, places) + (m.pinned ? ", fixed time" : ", follows the event")}</title>
+                <title>{(m.name || "unnamed moment") + ", " + fmtTime(r.start) + (isSpan && r.end != null ? " to " + fmtTime(r.end) : "") + ", on " + eventName(host, places) + (m.pinned ? ", fixed time" : ", follows the event") + (orphanParty ? " (no group assigned — click to fix or delete)" : "")}</title>
                 {(!highlight || sel) ? (() => {
                   const tm = sel ? " · " + fmtTime(r.start) : "";   /* the time shows only on the selected label, the axis carries it otherwise */
                   const shown = fitText((m.starred && showAll ? "★ " : "") + (m.name || "unnamed moment"), sel ? 280 : colRightEdge(host.location) - labelX - 6);
@@ -1652,7 +1660,7 @@ function PanelShell({ badge, title, sub, onClose, footer, label, children }) {
   return host === document.body ? node : ReactDOM.createPortal(node, host);
 }
 
-function DetailPanel({ kind, row, events, subEvents, parties, places, resolved, warnings, editable, onUpdate, onDuplicate, onDelete, onClose, onAddSubEvent, onSelect, onUpdatePlace, onUpdateParty }) {
+function DetailPanel({ kind, row, events, subEvents, parties, places, resolved, warnings, editable, onUpdate, onDuplicate, onDelete, onClose, onAddSubEvent, onSelect, onUpdatePlace, onUpdateParty, isDraft, onSave, onDiscard }) {
   if (!row) return null;
   const r = resolved[row.id] || {};
   const isEvent = kind === "event";
@@ -1698,7 +1706,13 @@ function DetailPanel({ kind, row, events, subEvents, parties, places, resolved, 
     );
   }
 
-  const footer = (
+  const footer = isDraft ? (
+    <React.Fragment>
+      <button type="button" className="btn danger-btn" onClick={onDiscard}>Discard</button>
+      <span className="spacer"></span>
+      <button type="button" className="btn primary" onClick={onSave}>Save {isEvent ? "event" : "moment"}</button>
+    </React.Fragment>
+  ) : (
     <React.Fragment>
       <button type="button" className="btn" onClick={onDuplicate}>Duplicate</button>
       <button type="button" className="btn danger-btn" onClick={onDelete}>Delete</button>
@@ -1747,10 +1761,13 @@ function DetailPanel({ kind, row, events, subEvents, parties, places, resolved, 
     </Psec>
   );
 
+  const draftNote = isDraft ? <p className="ct-hint draft-hint">Not created yet — fill this in, then Save to add it. Discard or close this panel and nothing is added.</p> : null;
+
   /* ---------- editor: event ---------- */
   if (isEvent) {
     return (
       <PanelShell badge={badge} title={title} sub={range} onClose={onClose} footer={footer} label={title + " details"}>
+        {draftNote}
         <Psec title="Status"><StatusSeg value={row.status} onChange={v => onUpdate({ status: v })} /></Psec>
         {warnBlock ? <Psec>{warnBlock}</Psec> : null}
         <Psec title="When">
@@ -1811,7 +1828,7 @@ function DetailPanel({ kind, row, events, subEvents, parties, places, resolved, 
         <Psec title="Who is here"><PartyChips options={parties} selected={row.parties} onToggle={toggleParty} />
           {!parties.length ? <p className="ct-hint">No groups yet. Add some under Groups and places.</p> : null}
         </Psec>
-        {row.type !== "travel" ? (
+        {row.type !== "travel" && !isDraft ? (
           <Psec title={"Moments" + (kids.length ? " (" + kids.length + ")" : "")}>
             {kids.length ? (
               <ul className="sub-list" style={{ marginBottom: 10 }}>
@@ -1828,6 +1845,9 @@ function DetailPanel({ kind, row, events, subEvents, parties, places, resolved, 
             <button type="button" className="btn" onClick={() => onAddSubEvent(row.id, null)}>{ICONS.plus}Add a moment</button>
           </Psec>
         ) : null}
+        {row.type !== "travel" && isDraft ? (
+          <Psec title="Moments"><p className="ct-hint">Save this event first, then you can add moments inside it.</p></Psec>
+        ) : null}
         {publicNotes}
         {privateBlock}
       </PanelShell>
@@ -1838,6 +1858,7 @@ function DetailPanel({ kind, row, events, subEvents, parties, places, resolved, 
   const setStartFromInput = v => { if (row.pinned) onUpdate({ start: v }); else if (hostRes.start != null && v != null) onUpdate({ offset: v - hostRes.start }); };
   return (
     <PanelShell badge={badge} title={title} sub={range} onClose={onClose} footer={footer} label={title + " details"}>
+      {draftNote}
       <Psec title="Status"><StatusSeg value={row.status} onChange={v => onUpdate({ status: v })} /></Psec>
       {warnBlock ? <Psec>{warnBlock}</Psec> : null}
       <Psec title="What and when">
@@ -1904,6 +1925,7 @@ function App() {
   const [parties, setParties] = useState(LOCAL_MODE ? seeded.parties : []);
   const [places, setPlaces] = useState(LOCAL_MODE ? seeded.places : []);
   const [selId, setSelId] = useState(null);
+  const [draft, setDraft] = useState(null);   /* an event or moment being created; not part of events/subEvents until Saved */
   const [showManager, setShowManager] = useState(false);
   const [view, setView] = useState("timeline");
   const [viewAs, setViewAs] = useState(null);
@@ -2045,17 +2067,25 @@ function App() {
     setParties(prev => prev.map(p => { const d = targets[p.id] ? delta(targets[p.id]) : 0; return (d && p.callTime != null) ? { ...p, callTime: Math.max(0, p.callTime + d) } : p; }));
   }
   function addEvent(patch) {
-    if (!editable) return;
+    if (!editable || draft) return;
     const s = normEvent({ id: newId("ev"), type: "event", label: "", parties: [], location: places[0] ? places[0].id : null, follows: null, start: null, duration: 30, status: "provisional", ...patch });
-    setEvents(prev => [...prev, s]); setSelId(s.id);
+    setDraft({ kind: "event", data: s }); setSelId(null);
   }
   function addSubEvent(eventId, mins) {
-    if (!editable) return;
+    if (!editable || draft) return;
     const host = events.find(s => s.id === eventId); if (!host) return;
     const hr = resolved[eventId] || {}; const at = mins != null ? mins : (hr.start != null ? hr.start : null);
     const m = normSubEvent({ id: newId("sub"), name: "", event: eventId, parties: [...(host.parties || [])], pinned: false, offset: (at != null && hr.start != null) ? at - hr.start : 0, duration: 0, status: "provisional" });
-    setSubEvents(prev => [...prev, m]); setSelId(m.id);
+    setDraft({ kind: "subEvent", data: m }); setSelId(null);
   }
+  function updateDraft(patch) { setDraft(d => (d ? { ...d, data: { ...d.data, ...patch } } : d)); }
+  function saveDraft() {
+    if (!draft) return;
+    if (draft.kind === "event") setEvents(prev => [...prev, draft.data]);
+    else setSubEvents(prev => [...prev, draft.data]);
+    setSelId(draft.data.id); setDraft(null);
+  }
+  function discardDraft() { setDraft(null); }
   function duplicateEvent(id) {
     if (!editable) return;
     const src = events.find(s => s.id === id); if (!src) return;
@@ -2158,9 +2188,9 @@ function App() {
   function downloadBackup() { downloadFile("nicole-and-michael-timeline-backup.json", JSON.stringify({ version: 4, events, subEvents, parties, places }, null, 2), "application/json"); }
   function downloadCsv() { downloadFile("nicole-and-michael-timeline.csv", buildCsv(events, subEvents, parties, places, resolved), "text/csv"); }
 
-  const selEvent = events.find(s => s.id === selId) || null;
-  const selSubEvent = selEvent ? null : (subEvents.find(m => m.id === selId) || null);
-  const selKind = selEvent ? "event" : (selSubEvent ? "subEvent" : null);
+  const selEvent = draft ? (draft.kind === "event" ? draft.data : null) : (events.find(s => s.id === selId) || null);
+  const selSubEvent = draft ? (draft.kind === "subEvent" ? draft.data : null) : (selEvent ? null : (subEvents.find(m => m.id === selId) || null));
+  const selKind = draft ? draft.kind : (selEvent ? "event" : (selSubEvent ? "subEvent" : null));
   const placeLabel = id => { const p = places.find(x => x.id === id); return p ? p.name : ""; };
 
   /* ----- overview ----- */
@@ -2548,11 +2578,12 @@ function App() {
       </div>
 
       <DetailPanel kind={selKind} row={selEvent || selSubEvent} events={events} subEvents={subEvents} parties={parties} places={places} resolved={resolved}
-        warnings={selId ? warningsById[selId] : null} editable={editable && !mapFs}
-        onUpdate={patch => (selKind === "event" ? updateEvent(selId, patch) : updateSubEvent(selId, patch))}
+        warnings={!draft && selId ? warningsById[selId] : null} editable={editable && !mapFs}
+        isDraft={!!draft} onSave={saveDraft} onDiscard={discardDraft}
+        onUpdate={patch => (draft ? updateDraft(patch) : (selKind === "event" ? updateEvent(selId, patch) : updateSubEvent(selId, patch)))}
         onDuplicate={() => (selKind === "event" ? duplicateEvent(selId) : duplicateSubEvent(selId))}
         onDelete={() => (selKind === "event" ? requestDeleteEvent(selId) : deleteSubEvent(selId))}
-        onClose={() => setSelId(null)} onAddSubEvent={addSubEvent} onSelect={id => setSelId(id)} onUpdatePlace={updatePlace} onUpdateParty={updateParty} />
+        onClose={() => (draft ? discardDraft() : setSelId(null))} onAddSubEvent={addSubEvent} onSelect={id => setSelId(id)} onUpdatePlace={updatePlace} onUpdateParty={updateParty} />
 
       {confirm ? (
         <div className="modal-scrim" onClick={() => setConfirm(null)}>
