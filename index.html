@@ -132,6 +132,11 @@
   .col-band { cursor: crosshair; }
   .col-band:hover { opacity: 0.7 !important; }
   .map-note { font-size: 16px; color: var(--muted); margin: 12px 0 0; line-height: 1.4; }
+  .unplaced-box { border: 1px solid var(--border-strong); background: var(--accent-soft); border-radius: 12px; padding: 12px 16px; margin: 0 0 14px; }
+  .unplaced-box h4 { margin: 0 0 4px; font-size: 16px; color: var(--ink); }
+  .unplaced-list { list-style: none; margin: 8px 0 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+  .unplaced-list li { display: flex; align-items: center; gap: 10px; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 6px 10px; }
+  .unplaced-list li .icon-btn { margin-left: auto; width: 26px; height: 26px; font-size: 14px; flex: none; }
   .legend { display: flex; gap: 20px; flex-wrap: wrap; align-items: center; margin-top: 16px; font-size: 16px; color: var(--muted); }
   .legend .li { display: inline-flex; align-items: center; gap: 8px; }
 
@@ -956,7 +961,7 @@ function wrapLines(text, maxPx, font, maxLines) {
   return lines;
 }
 
-function MapView({ events, subEvents, parties, places, resolved: resolvedProp, selId, setSelId, collapse, onMovePlaceTo, onMoveEvent, onAddEvent, onAddSubEvent, filter, editable: editableProp, onExpandedChange }) {
+function MapView({ events, subEvents, parties, places, resolved: resolvedProp, selId, setSelId, collapse, onMovePlaceTo, onMoveEvent, onAddEvent, onAddSubEvent, onDeleteSubEvent, onDeleteEvent, filter, editable: editableProp, onExpandedChange }) {
   const matches = s => filter === "all" || !filter || s.status !== "confirmed";
   const svgRef = useRef(null); const wrapRef = useRef(null);
   const [dragId, setDragId] = useState(null);
@@ -1021,6 +1026,11 @@ function MapView({ events, subEvents, parties, places, resolved: resolvedProp, s
   const placedIds = new Set(placed.map(s => s.id));
   const shownSubEvents = subEvents.filter(m => { const host = byEvent[m.event]; const r = resolved[m.id]; return host && placedIds.has(host.id) && matches(m) && r && r.start != null; });
   const skipped = (events.length - placed.length) + (subEvents.length - shownSubEvents.length);
+
+  /* rows that can never get a dot on the diagram (no host, no place, no time) regardless of filter/zoom — always listed so they stay findable and deletable */
+  const hostOk = e => { const r = resolved[e.id]; return !!(r && r.start != null && r.end != null && e.location && colIndex[e.location] != null); };
+  const unplacedEvents = events.filter(s => !hostOk(s));
+  const unplacedSubEvents = subEvents.filter(m => { const host = byEvent[m.event]; const r = resolved[m.id]; return !(host && hostOk(host) && r && r.start != null); });
 
   /* call times: a group is called before an event starts, so its line begins early. A time set on the event wins, otherwise the group's default call time belongs to the first event it is on at or after that time. */
   const partyById = {}; parties.forEach(p => { partyById[p.id] = p; });
@@ -1271,6 +1281,30 @@ function MapView({ events, subEvents, parties, places, resolved: resolvedProp, s
       <p className="map-hint">{editable
         ? "Tip: drag an event up or down to change its time, click a line where something happens to put a moment on it, or click empty space in a column to add an event. Click a group in the key to focus its line. Drag a column header to reorder places."
         : "Tip: click a group in the key to focus its line, or use Focus to follow one group through the day."}</p>
+      {editable && (unplacedEvents.length || unplacedSubEvents.length) ? (
+        <div className="unplaced-box">
+          <h4>Can't be shown on the map ({unplacedEvents.length + unplacedSubEvents.length})</h4>
+          <p className="ct-hint" style={{ marginTop: 0 }}>These have no place, no time, or no event to sit on, so there's no line to put them on. Open or delete them here.</p>
+          <ul className="unplaced-list">
+            {unplacedEvents.map(s => (
+              <li key={"ue" + s.id}>
+                <button type="button" className="link-btn" onClick={() => setSelId(s.id)}>{eventName(s, places)}</button>
+                {editable ? <button type="button" className="icon-btn danger" title="Delete" onClick={() => onDeleteEvent(s.id)}>{"✕"}</button> : null}
+              </li>
+            ))}
+            {unplacedSubEvents.map(m => {
+              const host = byEvent[m.event];
+              return (
+                <li key={"um" + m.id}>
+                  <button type="button" className="link-btn" onClick={() => setSelId(m.id)}>{m.name || "Untitled moment"}</button>
+                  <span className="fine" style={{ marginLeft: 6 }}>{host ? "on " + eventName(host, places) : "no event set"}</span>
+                  {editable ? <button type="button" className="icon-btn danger" title="Delete" onClick={() => onDeleteSubEvent(m.id)}>{"✕"}</button> : null}
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+      ) : null}
       <div className="map-wrap" ref={wrapRef}>
         <svg className="mapsvg mapsvg-head" width={width} height={HEAD_H} viewBox={"0 0 " + width + " " + HEAD_H} aria-hidden="true">
       {places.map((pl, i) => (
@@ -2548,7 +2582,8 @@ function App() {
         </React.Fragment>
       ) : view === "map" ? (
         <MapView events={events} subEvents={subEvents} parties={parties} places={places} resolved={resolved} selId={selId} setSelId={setSelId}
-          collapse={collapseTrunk} onMovePlaceTo={movePlaceTo} onMoveEvent={moveEvent} onAddEvent={addEvent} onAddSubEvent={addSubEvent} filter={filter} editable={editable} />
+          collapse={collapseTrunk} onMovePlaceTo={movePlaceTo} onMoveEvent={moveEvent} onAddEvent={addEvent} onAddSubEvent={addSubEvent}
+          onDeleteSubEvent={deleteSubEvent} onDeleteEvent={requestDeleteEvent} filter={filter} editable={editable} />
       ) : (
       <fieldset className="edit-scope" disabled={!editable}>
       <div className="table-wrap">
