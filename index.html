@@ -1,7 +1,7 @@
 <!doctype html><html><head><meta charset="utf8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Nicole and Michael · 06.26.2027</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;700&family=Pinyon+Script&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,500&family=Pinyon+Script&display=swap">
 <style>
   /* ===== Brand tokens: Nicole and Michael Brand Guidelines (locked) =====
      Locked hex: cream #F6F1EB, light blue #C9DDF2, steel blue #5680A6, black #000, lime #D9E689.
@@ -120,6 +120,13 @@
   .map-shell.expanded .map-controls, .map-shell.expanded .party-legend { flex: none; }
   .mapsvg text { font-family: var(--font-ui); }
   .mapsvg text.tlabel { font-variant-numeric: lining-nums tabular-nums; }
+  /* map labels: plain text with a halo so they read over lines without a box. Three tiers: events, moments, travel. */
+  .mapsvg text.lbl { paint-order: stroke; stroke: var(--surface); stroke-width: 4px; stroke-linejoin: round; pointer-events: none; }
+  .mapsvg text.lbl-ev { font-size: 15px; font-weight: 600; fill: var(--ink); }
+  .mapsvg text.lbl-mo { font-size: 14px; font-weight: 500; fill: var(--muted); }
+  .mapsvg text.lbl-tr { font-size: 14px; font-weight: 500; font-style: italic; fill: var(--muted); }
+  .mapsvg text.lbl.sel { font-weight: 700; fill: var(--ink); }
+  .mapsvg text.lbl .lbl-time { font-weight: 500; font-style: normal; fill: var(--muted); }
   .map-hint { font-size: 16px; color: var(--muted); margin: 0 0 12px; line-height: 1.4; }
   .col-band { cursor: crosshair; }
   .col-band:hover { opacity: 0.7 !important; }
@@ -971,8 +978,13 @@ function MapView({ events, subEvents, parties, places, resolved: resolvedProp, s
   const width = Math.max(COL0 + Math.max(0, places.length - 1) * COL_GAP + 150, 340);
   const height = PAD_TOP + (tMax - tMin) * PXM + PAD_BOTTOM;
 
-  const PER_CHAR = 5.9;
-  const fitText = (txt, maxPx) => { const max = Math.max(24, maxPx); const n = Math.floor(max / PER_CHAR); return (txt && txt.length > n) ? txt.slice(0, Math.max(1, n - 1)) + "…" : (txt || ""); };
+  const PER_CHAR = 5.9, PER_EV = 6.3, PER_TR = 5.5;   /* rough glyph widths for the event, moment and travel label tiers */
+  const fitText = (txt, maxPx, per = PER_CHAR) => { const max = Math.max(24, maxPx); const n = Math.floor(max / per); return (txt && txt.length > n) ? txt.slice(0, Math.max(1, n - 1)) + "…" : (txt || ""); };
+  /* where a party's line starts: travel begins in the place it leaves, everything else at its own x */
+  const lineFrom = (s, pid, dx) => {
+    const o = s.type === "travel" && s.follows ? byEvent[s.follows] : null;
+    return (o && o.location && colIndex[o.location] != null) ? (colX(colIndex[o.location]) + trackOff(pid)) : dx;
+  };
   const colRightEdge = locId => colX(colIndex[locId]) + COL_GAP * 0.5 + (colIndex[locId] === places.length - 1 ? 140 : 0);
 
   const gridStep = 30; const gridlines = [];
@@ -1197,8 +1209,7 @@ function MapView({ events, subEvents, parties, places, resolved: resolvedProp, s
                   if (rankOf[pid] == null) return null;
                   const col = colorOf[pid] || "#888"; const dx = xAt(s, pid); const d = dimOf(pid);
                   const hoverH = { onMouseEnter: () => setHoverParty(pid), onMouseLeave: () => setHoverParty(null) };
-                  const origin = (isTravel && s.follows && byEvent[s.follows] && byEvent[s.follows].location && colIndex[byEvent[s.follows].location] != null) ? byEvent[s.follows].location : null;
-                  const sx = isTravel ? (origin ? (colX(colIndex[origin]) + trackOff(pid)) : dx) : dx;
+                  const sx = lineFrom(s, pid, dx);
                   const cs = callMap[s.id] && callMap[s.id][pid]; const yTop = cs != null ? yFor(cs) : y1;   /* the line starts at the call time */
                   return (
                     <g key={pid} {...hoverH}>
@@ -1223,8 +1234,7 @@ function MapView({ events, subEvents, parties, places, resolved: resolvedProp, s
             const pids = (m.parties || []).filter(pid => rankOf[pid] != null && (host.parties || []).includes(pid));
             if (!pids.length) return null;
             const xs = pids.map(pid => xAt(host, pid)); const minX = Math.min(...xs), maxX = Math.max(...xs);
-            const txt = (m.name || "unnamed moment") + " " + fmtTime(r.start);
-            const labelX = maxX + 11; const shown = fitText(txt, colRightEdge(host.location) - labelX - 6); const w = shown.length * PER_CHAR + 13;
+            const labelX = maxX + 11;
             return (
               <g key={"mo" + m.id} style={{ cursor: "pointer" }} onClick={() => pick(m.id)}>
                 {pids.length > 1 ? <line x1={minX} y1={y1} x2={maxX} y2={y1} style={{ stroke: sel ? "var(--accent)" : "var(--muted)" }} strokeWidth={sel ? 3 : 2} strokeOpacity="0.5" strokeLinecap="round" /> : null}
@@ -1240,28 +1250,46 @@ function MapView({ events, subEvents, parties, places, resolved: resolvedProp, s
                   );
                 })}
                 <title>{(m.name || "unnamed moment") + ", " + fmtTime(r.start) + (isSpan && r.end != null ? " to " + fmtTime(r.end) : "") + ", on " + eventName(host, places) + (m.pinned ? ", fixed time" : ", follows the event")}</title>
-                {((showLabels && !highlight) || sel) ? (
-                  <g style={{ pointerEvents: "none" }}>
-                    <rect x={labelX} y={y1 - 10} width={w} height={20} rx={4} style={{ fill: "var(--surface)", stroke: sel ? "var(--accent)" : "var(--border)" }} strokeWidth="1" opacity="0.96" />
-                    <text x={labelX + 6} y={y1 + 4.5} fontSize="13.5" fontWeight={sel ? "700" : "400"} style={{ fill: "var(--ink)" }}>{shown}</text>
-                  </g>
-                ) : null}
+                {((showLabels && !highlight) || sel) ? (() => {
+                  const tm = sel ? " · " + fmtTime(r.start) : "";   /* the time shows only on the selected label, the axis carries it otherwise */
+                  const shown = fitText(m.name || "unnamed moment", sel ? 280 : colRightEdge(host.location) - labelX - 6);
+                  return <text className={"lbl lbl-mo" + (sel ? " sel" : "")} x={labelX} y={y1 + 4.5}>{shown}{sel ? <tspan className="lbl-time">{tm}</tspan> : null}</text>;
+                })() : null}
               </g>
             );
           })}
 
           {placed.map(s => {
             const sel = selId === s.id; if (!sel && (!showLabels || highlight)) return null;
-            const r = resolved[s.id];
-            const offs = (s.parties || []).filter(p => rankOf[p] != null).map(p => trackOff(p));
+            const r = resolved[s.id]; const name = eventName(s, places);
+            const tm = sel ? " · " + fmtTime(r.start) : "";   /* the time shows only on the selected label, the axis carries it otherwise */
+            const pids = (s.parties || []).filter(p => rankOf[p] != null);
+            if (s.type === "travel") {
+              /* travel is named along its own diagonal, on the outer side of the bundle, and drops to an upright label beside steep legs */
+              if (!pids.length) return null;
+              const y1 = yFor(r.start), y2 = yFor(r.end);
+              const legs = pids.map(pid => { const dx = xAt(s, pid); return { sx: lineFrom(s, pid, dx), dx }; });
+              const ref = legs.reduce((a, b) => ((b.sx + b.dx) > (a.sx + a.dx) ? b : a));
+              const mx = (ref.sx + ref.dx) / 2, my = (y1 + y2) / 2;
+              let vx = ref.dx - ref.sx, vy = y2 - y1; if (vx < 0) { vx = -vx; vy = -vy; }   /* read left to right */
+              const deg = Math.atan2(vy, vx) * 180 / Math.PI; const len = Math.hypot(vx, vy);
+              if (Math.abs(deg) <= 50 && len > 60) {
+                const shown = fitText(name, sel ? 280 : len - 20, PER_TR); const up = deg >= 0;
+                return (
+                  <text key={"lbl" + s.id} className={"lbl lbl-tr" + (sel ? " sel" : "")} textAnchor="middle" transform={"translate(" + mx + " " + my + ") rotate(" + deg + ")"} y={up ? -8 : 15}>{shown}{sel ? <tspan className="lbl-time">{tm}</tspan> : null}</text>
+                );
+              }
+              const lx = mx + 10; const shown = fitText(name, sel ? 280 : colRightEdge(s.location) - lx - 6, PER_TR);
+              return (
+                <text key={"lbl" + s.id} className={"lbl lbl-tr" + (sel ? " sel" : "")} x={lx} y={my + 4.5}>{shown}{sel ? <tspan className="lbl-time">{tm}</tspan> : null}</text>
+              );
+            }
+            const offs = pids.map(p => trackOff(p));
             const rightX = colX(colIndex[s.location]) + (offs.length ? Math.max(...offs) : 0);
-            const y = yFor(r.start); const txt = eventName(s, places) + " " + fmtTime(r.start);
-            const lx = rightX + 10; const shown = fitText(txt, colRightEdge(s.location) - lx - 6); const w = shown.length * PER_CHAR + 14;
+            const y = yFor(r.start); const lx = rightX + 10;
+            const shown = fitText(name, sel ? 280 : colRightEdge(s.location) - lx - 6, PER_EV);
             return (
-              <g key={"lbl" + s.id} style={{ pointerEvents: "none" }}>
-                <rect x={lx} y={y - 10} width={w} height={20} rx={4} style={{ fill: "var(--surface)", stroke: sel ? "var(--accent)" : "var(--border)" }} strokeWidth="1" opacity="0.95" />
-                <text x={lx + 7} y={y + 4.5} fontSize="14" fontWeight={sel ? "700" : "700"} style={{ fill: "var(--ink)" }}>{shown}</text>
-              </g>
+              <text key={"lbl" + s.id} className={"lbl lbl-ev" + (sel ? " sel" : "")} x={lx} y={y + 5}>{shown}{sel ? <tspan className="lbl-time">{tm}</tspan> : null}</text>
             );
           })}
 
