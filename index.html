@@ -906,6 +906,56 @@ const DETAIL_LEVELS = [
 ];
 function autoDetailLevel(zoom) { return zoom < 0.7 ? "overview" : zoom < 1.15 ? "key" : "everything"; }
 
+/* Map label text: measured with the real font (not guessed per character), so nothing spills and nothing
+   is hidden just because a rough estimate ran short. A label always shows at least an ellipsis; the full
+   name is always available in the tooltip, the detail panel, and the selected label itself. */
+const _measureCtx = (typeof document !== "undefined") ? document.createElement("canvas").getContext("2d") : null;
+const _measureCache = new Map();
+function textWidth(text, font) {
+  if (!text) return 0;
+  const key = font + " " + text;
+  let w = _measureCache.get(key);
+  if (w === undefined) {
+    if (_measureCtx) { _measureCtx.font = font; w = _measureCtx.measureText(text).width; } else w = text.length * 7;
+    _measureCache.set(key, w);
+  }
+  return w;
+}
+const CORMORANT = '"Cormorant Garamond", Garamond, "Times New Roman", serif';
+const LBL_FONT = {
+  ev: "600 15px " + CORMORANT, evSel: "700 15px " + CORMORANT,
+  mo: "500 14px " + CORMORANT, moSel: "700 14px " + CORMORANT,
+  tr: "italic 500 14px " + CORMORANT, trSel: "italic 700 14px " + CORMORANT,
+  focus: "700 14px " + CORMORANT,
+};
+function ellipsizeToWidth(text, maxPx, font) {
+  if (!text) return "";
+  if (textWidth(text, font) <= maxPx) return text;
+  let lo = 0, hi = text.length;
+  while (lo < hi) {
+    const mid = (lo + hi + 1) >> 1;
+    if (textWidth(text.slice(0, mid).trimEnd() + "…", font) <= maxPx) lo = mid; else hi = mid - 1;
+  }
+  return lo <= 0 ? "…" : text.slice(0, lo).trimEnd() + "…";   /* never returns nothing */
+}
+function wrapLines(text, maxPx, font, maxLines) {
+  const words = (text || "").split(/\s+/).filter(Boolean);
+  if (!words.length) return [""];
+  const lines = []; let cur = "", i = 0;
+  while (i < words.length && lines.length < maxLines) {
+    const trial = cur ? cur + " " + words[i] : words[i];
+    if (!cur || textWidth(trial, font) <= maxPx) { cur = trial; i++; } else { lines.push(cur); cur = ""; }
+  }
+  if (cur) lines.push(cur);
+  if (i < words.length) {   /* words left over: fold them into the last line and ellipsize it */
+    const last = lines.pop();
+    lines.push(ellipsizeToWidth(last + " " + words.slice(i).join(" "), maxPx, font));
+  } else if (lines.length && textWidth(lines[lines.length - 1], font) > maxPx) {
+    lines[lines.length - 1] = ellipsizeToWidth(lines[lines.length - 1], maxPx, font);   /* one word too long for its own line */
+  }
+  return lines;
+}
+
 function MapView({ events, subEvents, parties, places, resolved: resolvedProp, selId, setSelId, collapse, onMovePlaceTo, onMoveEvent, onAddEvent, onAddSubEvent, filter, editable: editableProp, onExpandedChange }) {
   const matches = s => filter === "all" || !filter || s.status !== "confirmed";
   const svgRef = useRef(null); const wrapRef = useRef(null);
@@ -1002,14 +1052,37 @@ function MapView({ events, subEvents, parties, places, resolved: resolvedProp, s
   const width = Math.max(COL0 + Math.max(0, places.length - 1) * COL_GAP + 150, 340);
   const height = PAD_TOP + (tMax - tMin) * PXM + PAD_BOTTOM;
 
-  const PER_CHAR = 5.9, PER_EV = 6.3, PER_TR = 5.5;   /* rough glyph widths for the event, moment and travel label tiers */
-  const fitText = (txt, maxPx, per = PER_CHAR) => { const max = Math.max(24, maxPx); const n = Math.floor(max / per); return (txt && txt.length > n) ? txt.slice(0, Math.max(1, n - 1)) + "…" : (txt || ""); };
   /* where a party's line starts: travel begins in the place it leaves, everything else at its own x */
   const lineFrom = (s, pid, dx) => {
     const o = s.type === "travel" && s.follows ? byEvent[s.follows] : null;
     return (o && o.location && colIndex[o.location] != null) ? (colX(colIndex[o.location]) + trackOff(pid)) : dx;
   };
   const colRightEdge = locId => colX(colIndex[locId]) + COL_GAP * 0.5 + (colIndex[locId] === places.length - 1 ? 140 : 0);
+  const colLeftEdge = locId => colIndex[locId] === 0 ? PAD_LEFT + 6 : colX(colIndex[locId] - 1) + COL_GAP * 0.5;
+  /* a label's home is to the right of its bundle; it flips to the left when the right has less room —
+     the last column, or a column packed close to its neighbor. */
+  const labelSide = (locId, x0, x1) => {
+    const rightAvail = colRightEdge(locId) - (x1 + 11) - 6, leftAvail = (x0 - 11) - colLeftEdge(locId) - 6;
+    return leftAvail > rightAvail ? { side: "l", avail: Math.max(20, leftAvail), lx: x0 - 11 } : { side: "r", avail: Math.max(20, rightAvail), lx: x1 + 11 };
+  };
+  function buildLabel(locId, x0, x1, y, sel, name, timeText, font) {
+    const picked = labelSide(locId, x0, x1);
+    const avail = sel ? Math.max(picked.avail, 280) : picked.avail;
+    const lines = sel ? [ellipsizeToWidth(name, avail, font)]
+      : (textWidth(name, font) <= avail ? [name] : wrapLines(name, avail, font, 2));
+    return { sel, group: sel ? null : (locId + "|" + picked.side), y, ly: y, lx: picked.lx, anchor: picked.side === "l" ? "end" : "start", lines, timeText: sel ? timeText : null };
+  }
+  const LBL_GAP = 19, LBL_LINE_H = 16;
+  function declutter(list) {
+    const byGroup = {};
+    list.forEach(it => { if (it.group) (byGroup[it.group] = byGroup[it.group] || []).push(it); });
+    Object.values(byGroup).forEach(group => {
+      group.sort((a, b) => a.y - b.y);
+      let lastBottom = -Infinity;
+      group.forEach(it => { const h = Math.max(LBL_GAP, it.lines.length * LBL_LINE_H + 3); it.ly = Math.max(it.y, lastBottom + h); lastBottom = it.ly; });
+    });
+    return list;
+  }
 
   const gridStep = 30; const gridlines = [];
   for (let m = Math.ceil(tMin / gridStep) * gridStep; m <= tMax; m += gridStep) gridlines.push(m);
@@ -1114,6 +1187,39 @@ function MapView({ events, subEvents, parties, places, resolved: resolvedProp, s
     raw.sort((a, b) => a.y - b.y);
     let lastY = -1e9; raw.forEach(it => { let ly = it.y; if (ly < lastY + 19) ly = lastY + 19; lastY = ly; focusLabels.push({ ...it, ly }); });
   }
+
+  /* event and moment labels: measured, side-flipped, wrapped to two lines before ellipsizing, then
+     stacked with Focus mode's own 19px minimum gap so a busy column never overlaps itself. */
+  const eventLabels = [];
+  placed.forEach(s => {
+    if (s.type === "travel") return;   /* travel is named along its own diagonal, handled separately */
+    const sel = selId === s.id; if (!sel && highlight) return;
+    const r = resolved[s.id]; if (!r || r.start == null) return;
+    const offs = (s.parties || []).filter(p => rankOf[p] != null).map(p => trackOff(p));
+    const colX0 = colX(colIndex[s.location]);
+    const x0 = colX0 + (offs.length ? Math.min(...offs) : 0), x1 = colX0 + (offs.length ? Math.max(...offs) : 0);
+    const y = yFor(r.start);
+    eventLabels.push({ id: "ev" + s.id, y, ...buildLabel(s.location, x0, x1, y, sel, eventName(s, places), " · " + fmtTime(r.start), sel ? LBL_FONT.evSel : LBL_FONT.ev) });
+  });
+  declutter(eventLabels);
+
+  const momentLabels = [];
+  if (showMoments) {
+    shownSubEvents.forEach(m => {
+      if (!showAll && !m.starred) return;
+      const host = byEvent[m.event]; if (!host) return;
+      const r = resolved[m.id]; if (!r || r.start == null) return;
+      const sel = selId === m.id; if (!sel && highlight) return;
+      const pids = (m.parties || []).filter(pid => rankOf[pid] != null && (host.parties || []).includes(pid));
+      const fallbackX = colX(colIndex[host.location]) - BUNDLE_SHIFT;
+      const xs = pids.length ? pids.map(pid => xAt(host, pid)) : [fallbackX];
+      const x0 = Math.min(...xs), x1 = Math.max(...xs);
+      const y = yFor(r.start);
+      const name = (m.starred && showAll ? "★ " : "") + (m.name || "unnamed moment");
+      momentLabels.push({ id: "mo" + m.id, y, ...buildLabel(host.location, x0, x1, y, sel, name, " · " + fmtTime(r.start), sel ? LBL_FONT.moSel : LBL_FONT.mo) });
+    });
+  }
+  declutter(momentLabels);
 
   return (
     <div className={"map-shell" + (expanded ? " expanded" : "")} ref={shellRef}>
@@ -1265,7 +1371,6 @@ function MapView({ events, subEvents, parties, places, resolved: resolvedProp, s
             const orphanParty = !pids.length;
             const fallbackX = colX(colIndex[host.location]) - BUNDLE_SHIFT;
             const xs = orphanParty ? [fallbackX] : pids.map(pid => xAt(host, pid)); const minX = Math.min(...xs), maxX = Math.max(...xs);
-            const labelX = maxX + 11;
             return (
               <g key={"mo" + m.id} style={{ cursor: "pointer" }} onClick={() => pick(m.id)}>
                 {pids.length > 1 ? <line x1={minX} y1={y1} x2={maxX} y2={y1} style={{ stroke: sel ? "var(--accent)" : "var(--muted)" }} strokeWidth={sel ? 3 : 2} strokeOpacity="0.5" strokeLinecap="round" /> : null}
@@ -1287,48 +1392,56 @@ function MapView({ events, subEvents, parties, places, resolved: resolvedProp, s
                   );
                 })}
                 <title>{(m.name || "unnamed moment") + ", " + fmtTime(r.start) + (isSpan && r.end != null ? " to " + fmtTime(r.end) : "") + ", on " + eventName(host, places) + (m.pinned ? ", fixed time" : ", follows the event") + (orphanParty ? " (no group assigned — click to fix or delete)" : "")}</title>
-                {(!highlight || sel) ? (() => {
-                  const tm = sel ? " · " + fmtTime(r.start) : "";   /* the time shows only on the selected label, the axis carries it otherwise */
-                  const shown = fitText((m.starred && showAll ? "★ " : "") + (m.name || "unnamed moment"), sel ? 280 : colRightEdge(host.location) - labelX - 6);
-                  return <text className={"lbl lbl-mo" + (sel ? " sel" : "")} x={labelX} y={y1 + 4.5}>{shown}{sel ? <tspan className="lbl-time">{tm}</tspan> : null}</text>;
-                })() : null}
               </g>
             );
           })}
 
+          {/* travel is named along its own diagonal, on the outer side of the bundle, and drops to an upright label beside steep legs */}
           {placed.map(s => {
-            const sel = selId === s.id; if (!sel && highlight) return null;   /* event and travel labels always show; only a party highlight thins them */
+            if (s.type !== "travel") return null;
+            const sel = selId === s.id; if (!sel && highlight) return null;
             const r = resolved[s.id]; const name = eventName(s, places);
             const tm = sel ? " · " + fmtTime(r.start) : "";   /* the time shows only on the selected label, the axis carries it otherwise */
             const pids = (s.parties || []).filter(p => rankOf[p] != null);
-            if (s.type === "travel") {
-              /* travel is named along its own diagonal, on the outer side of the bundle, and drops to an upright label beside steep legs */
-              if (!pids.length) return null;
-              const y1 = yFor(r.start), y2 = yFor(r.end);
-              const legs = pids.map(pid => { const dx = xAt(s, pid); return { sx: lineFrom(s, pid, dx), dx }; });
-              const ref = legs.reduce((a, b) => ((b.sx + b.dx) > (a.sx + a.dx) ? b : a));
-              const mx = (ref.sx + ref.dx) / 2, my = (y1 + y2) / 2;
-              let vx = ref.dx - ref.sx, vy = y2 - y1; if (vx < 0) { vx = -vx; vy = -vy; }   /* read left to right */
-              const deg = Math.atan2(vy, vx) * 180 / Math.PI; const len = Math.hypot(vx, vy);
-              if (Math.abs(deg) <= 50 && len > 60) {
-                const shown = fitText(name, sel ? 280 : len - 20, PER_TR); const up = deg >= 0;
-                return (
-                  <text key={"lbl" + s.id} className={"lbl lbl-tr" + (sel ? " sel" : "")} textAnchor="middle" transform={"translate(" + mx + " " + my + ") rotate(" + deg + ")"} y={up ? -8 : 15}>{shown}{sel ? <tspan className="lbl-time">{tm}</tspan> : null}</text>
-                );
-              }
-              const lx = mx + 10; const shown = fitText(name, sel ? 280 : colRightEdge(s.location) - lx - 6, PER_TR);
+            if (!pids.length) return null;
+            const font = sel ? LBL_FONT.trSel : LBL_FONT.tr;
+            const y1 = yFor(r.start), y2 = yFor(r.end);
+            const legs = pids.map(pid => { const dx = xAt(s, pid); return { sx: lineFrom(s, pid, dx), dx }; });
+            const ref = legs.reduce((a, b) => ((b.sx + b.dx) > (a.sx + a.dx) ? b : a));
+            const mx = (ref.sx + ref.dx) / 2, my = (y1 + y2) / 2;
+            let vx = ref.dx - ref.sx, vy = y2 - y1; if (vx < 0) { vx = -vx; vy = -vy; }   /* read left to right */
+            const deg = Math.atan2(vy, vx) * 180 / Math.PI; const len = Math.hypot(vx, vy);
+            if (Math.abs(deg) <= 50 && len > 60) {
+              const shown = ellipsizeToWidth(name, Math.max(20, sel ? 280 : len - 20), font); const up = deg >= 0;
               return (
-                <text key={"lbl" + s.id} className={"lbl lbl-tr" + (sel ? " sel" : "")} x={lx} y={my + 4.5}>{shown}{sel ? <tspan className="lbl-time">{tm}</tspan> : null}</text>
+                <text key={"lbl" + s.id} className={"lbl lbl-tr" + (sel ? " sel" : "")} textAnchor="middle" transform={"translate(" + mx + " " + my + ") rotate(" + deg + ")"} y={up ? -8 : 15}>{shown}{sel ? <tspan className="lbl-time">{tm}</tspan> : null}</text>
               );
             }
-            const offs = pids.map(p => trackOff(p));
-            const rightX = colX(colIndex[s.location]) + (offs.length ? Math.max(...offs) : 0);
-            const y = yFor(r.start); const lx = rightX + 10;
-            const shown = fitText(name, sel ? 280 : colRightEdge(s.location) - lx - 6, PER_EV);
+            const lx = mx + 10; const shown = ellipsizeToWidth(name, Math.max(20, sel ? 280 : colRightEdge(s.location) - lx - 6), font);
             return (
-              <text key={"lbl" + s.id} className={"lbl lbl-ev" + (sel ? " sel" : "")} x={lx} y={y + 5}>{shown}{sel ? <tspan className="lbl-time">{tm}</tspan> : null}</text>
+              <text key={"lbl" + s.id} className={"lbl lbl-tr" + (sel ? " sel" : "")} x={lx} y={my + 4.5}>{shown}{sel ? <tspan className="lbl-time">{tm}</tspan> : null}</text>
             );
           })}
+
+          {eventLabels.map(lbl => (
+            <g key={lbl.id} style={{ pointerEvents: "none" }}>
+              {Math.abs(lbl.ly - lbl.y) > 2 ? <line x1={lbl.anchor === "end" ? lbl.lx + 6 : lbl.lx - 6} y1={lbl.y} x2={lbl.lx} y2={lbl.ly} style={{ stroke: "var(--border-strong)" }} strokeWidth="1" /> : null}
+              <text className={"lbl lbl-ev" + (lbl.sel ? " sel" : "")} x={lbl.lx} y={lbl.ly + 5} textAnchor={lbl.anchor}>
+                {lbl.lines.map((ln, i) => <tspan key={i} x={lbl.lx} dy={i === 0 ? 0 : LBL_LINE_H}>{ln}</tspan>)}
+                {lbl.timeText ? <tspan className="lbl-time">{lbl.timeText}</tspan> : null}
+              </text>
+            </g>
+          ))}
+
+          {momentLabels.map(lbl => (
+            <g key={lbl.id} style={{ pointerEvents: "none" }}>
+              {Math.abs(lbl.ly - lbl.y) > 2 ? <line x1={lbl.anchor === "end" ? lbl.lx + 6 : lbl.lx - 6} y1={lbl.y} x2={lbl.lx} y2={lbl.ly} style={{ stroke: "var(--border-strong)" }} strokeWidth="1" /> : null}
+              <text className={"lbl lbl-mo" + (lbl.sel ? " sel" : "")} x={lbl.lx} y={lbl.ly + 4.5} textAnchor={lbl.anchor}>
+                {lbl.lines.map((ln, i) => <tspan key={i} x={lbl.lx} dy={i === 0 ? 0 : LBL_LINE_H}>{ln}</tspan>)}
+                {lbl.timeText ? <tspan className="lbl-time">{lbl.timeText}</tspan> : null}
+              </text>
+            </g>
+          ))}
 
           {drag && resolved[drag.id] && resolved[drag.id].start != null ? (() => {
             const s = byEvent[drag.id]; const r = resolved[drag.id]; const txt = fmtTime(r.start) + " to " + fmtTime(r.end);
@@ -1342,7 +1455,7 @@ function MapView({ events, subEvents, parties, places, resolved: resolvedProp, s
           })() : null}
 
           {focusParty ? focusLabels.map(it => {
-            const w = it.text.length * PER_CHAR + 14;
+            const w = textWidth(it.text, LBL_FONT.focus) + 14;
             return (
               <g key={"fl" + it.id} style={{ pointerEvents: "none" }}>
                 <line x1={it.x} y1={it.y} x2={it.x + 9} y2={it.ly} style={{ stroke: colorOf[focusParty] || "var(--ink)" }} strokeWidth="1" strokeOpacity="0.6" />
