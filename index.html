@@ -1372,10 +1372,19 @@ function MapView({ events, subEvents, parties, places, resolved: resolvedProp, s
                 </g>
               );
             }
+            const validParties = (s.parties || []).filter(pid => rankOf[pid] != null);
+            const fallbackX = colX(colIndex[s.location]) - BUNDLE_SHIFT;
             return (
               <g key={s.id} style={{ cursor: editable ? "grab" : "pointer", touchAction: editable ? "none" : "auto" }} onClick={() => pick(s.id)} {...evDrag(s)}>
-                {(s.parties || []).map(pid => {
-                  if (rankOf[pid] == null) return null;
+                {!validParties.length ? (
+                  <g opacity="0.85">
+                    {sel ? <line x1={fallbackX} y1={y1} x2={fallbackX} y2={y2} style={{ stroke: "var(--accent)" }} strokeOpacity="0.3" strokeWidth={st.w + 10} strokeLinecap="round" /> : null}
+                    <line x1={fallbackX} y1={y1} x2={fallbackX} y2={y2} style={{ stroke: "var(--muted)" }} strokeWidth={st.w} strokeDasharray="2 2" strokeLinecap="round" />
+                    <circle cx={fallbackX} cy={y1} r={st.w / 2 + 2} fill="var(--surface)" stroke="var(--muted)" strokeWidth="2.5" strokeDasharray="2 2" />
+                    {!isTravel ? <circle cx={fallbackX} cy={y2} r={st.w / 2 + 2} fill="var(--surface)" stroke="var(--muted)" strokeWidth="2.5" strokeDasharray="2 2" /> : null}
+                    <title>{eventName(s, places) + ", " + fmtTime(r.start) + " to " + fmtTime(r.end) + " (no group assigned — click to fix or delete), " + statusText(s.status, !editableProp)}</title>
+                  </g>
+                ) : validParties.map(pid => {
                   const col = colorOf[pid] || "#888"; const dx = xAt(s, pid); const d = dimOf(pid);
                   const hoverH = { onMouseEnter: () => setHoverParty(pid), onMouseLeave: () => setHoverParty(null) };
                   const sx = lineFrom(s, pid, dx);
@@ -1853,11 +1862,12 @@ function DetailPanel({ kind, row, events, subEvents, parties, places, resolved, 
     );
   }
 
+  const nameMissing = isDraft && !((isEvent ? row.label : row.name) || "").trim();
   const footer = isDraft ? (
     <React.Fragment>
       <button type="button" className="btn danger-btn" onClick={onDiscard}>Discard</button>
       <span className="spacer"></span>
-      <button type="button" className="btn primary" onClick={onSave}>Save {isEvent ? "event" : "moment"}</button>
+      <button type="button" className="btn primary" disabled={nameMissing} title={nameMissing ? "Give it a name first" : undefined} onClick={onSave}>Save {isEvent ? "event" : "moment"}</button>
     </React.Fragment>
   ) : (
     <React.Fragment>
@@ -1908,7 +1918,7 @@ function DetailPanel({ kind, row, events, subEvents, parties, places, resolved, 
     </Psec>
   );
 
-  const draftNote = isDraft ? <p className="ct-hint draft-hint">Not created yet — fill this in, then Save to add it. Discard or close this panel and nothing is added.</p> : null;
+  const draftNote = isDraft ? <p className="ct-hint draft-hint">Not created yet — fill this in, then Save to add it. Discard or close this panel and nothing is added.{nameMissing ? " It needs a name before it can be saved." : ""}</p> : null;
 
   /* ---------- editor: event ---------- */
   if (isEvent) {
@@ -1918,8 +1928,8 @@ function DetailPanel({ kind, row, events, subEvents, parties, places, resolved, 
         <Psec title="Status"><StatusSeg value={row.status} onChange={v => onUpdate({ status: v })} /></Psec>
         {warnBlock ? <Psec>{warnBlock}</Psec> : null}
         <Psec title="When">
-          <label className="fld"><span>Name</span>
-            <input className="cell-input bx" value={row.label} placeholder={eventName({ ...row, label: "" }, places)} onChange={e => onUpdate({ label: e.target.value })} />
+          <label className="fld"><span>Name{isDraft ? " (required)" : ""}</span>
+            <input className="cell-input bx" value={row.label} placeholder={isDraft ? "Name this event" : eventName({ ...row, label: "" }, places)} onChange={e => onUpdate({ label: e.target.value })} />
           </label>
           <div className="fld2">
             <label className="fld"><span>Kind</span>
@@ -2009,7 +2019,7 @@ function DetailPanel({ kind, row, events, subEvents, parties, places, resolved, 
       <Psec title="Status"><StatusSeg value={row.status} onChange={v => onUpdate({ status: v })} /></Psec>
       {warnBlock ? <Psec>{warnBlock}</Psec> : null}
       <Psec title="What and when">
-        <label className="fld"><span>What happens</span>
+        <label className="fld"><span>What happens{isDraft ? " (required)" : ""}</span>
           <div className="fld-row">
             <input className="cell-input bx" value={row.name} placeholder="Bride hair done, dinner served" onChange={e => onUpdate({ name: e.target.value })} />
             <button type="button" className={"star-btn" + (row.starred ? " on" : "")} aria-pressed={!!row.starred}
@@ -2227,6 +2237,8 @@ function App() {
   function updateDraft(patch) { setDraft(d => (d ? { ...d, data: { ...d.data, ...patch } } : d)); }
   function saveDraft() {
     if (!draft) return;
+    const nameField = draft.kind === "event" ? draft.data.label : draft.data.name;
+    if (!(nameField || "").trim()) return;
     if (draft.kind === "event") setEvents(prev => [...prev, draft.data]);
     else setSubEvents(prev => [...prev, draft.data]);
     setSelId(draft.data.id); setDraft(null);
